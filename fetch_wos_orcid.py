@@ -67,7 +67,8 @@ def extract_wos_publications(orcid_id, researcher_name, researcher_id):
                     "quartile": "Q4", # Default
                     "status": "PUBLISHED",
                     "authors": [{"name": researcher_name, "order": 1, "isCorresponding": False, "userId": researcher_id}],
-                    "databases": ["WoS"]
+                    "databases": ["WoS"],
+                    "citations": 0
                 })
                 break # Only process one summary per group if it matches
     return wos_pubs

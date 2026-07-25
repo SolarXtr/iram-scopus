@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     title: pub.title || 'Untitled',
                     doi: pub.doi || '',
                     journal: pub.journal || 'Unknown Journal',
-                    year: pub.year ? String(pub.year) : 'Unknown Year',
+                    year: pub.year ? String(parseInt(pub.year, 10)) : 'Unknown Year',
                     coverDate: pub.coverDate || '',
                     quartile_scopus: pub.quartile || '',
                     quartile_scimago: pub.quartile || '',

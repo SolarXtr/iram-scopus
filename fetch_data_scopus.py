@@ -546,7 +546,8 @@ def main():
             "quartile": doc.get("quartile_scopus", "Q4"),
             "status": "PUBLISHED",
             "authors": authors_payload,
-            "databases": doc.get("databases", ["Scopus"])
+            "databases": doc.get("databases", ["Scopus"]),
+            "citations": doc.get("citations", 0)
         }
         
         try:
