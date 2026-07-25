@@ -87,6 +87,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     researchers: db.researchers || []
                 };
             }
+            
+            // Check last sync date from dbMetadata.retrieved_at
+            if (dbMetadata.retrieved_at) {
+                const syncDate = new Date(dbMetadata.retrieved_at);
+                const now = new Date();
+                const diffTime = Math.abs(now - syncDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays > 15) {
+                    const warnEl = document.getElementById('sync-warning');
+                    const dateEl = document.getElementById('last-sync-date');
+                    if (warnEl && dateEl) {
+                        dateEl.textContent = syncDate.toLocaleDateString();
+                        warnEl.style.display = 'block';
+                    }
+                }
+            }
+            
             populateYearDropdown();
             populateResearcherFilters();
             renderResearchers();
@@ -549,12 +567,14 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('researcher-idx').value = idx;
             document.getElementById('res-name').value = r.name;
             document.getElementById('res-id').value = r.author_id;
+            document.getElementById('res-orcid').value = r.orcid || "";
             document.getElementById('res-dept').value = r.department;
             document.getElementById('res-status').value = r.status;
         } else {
             researcherModalTitle.textContent = "Add Researcher";
             researcherForm.reset();
             document.getElementById('researcher-idx').value = "";
+            document.getElementById('res-orcid').value = "";
         }
         researcherModal.classList.add('active');
     }
@@ -569,6 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const record = {
             name: document.getElementById('res-name').value.trim(),
             author_id: document.getElementById('res-id').value.trim(),
+            orcid: document.getElementById('res-orcid').value.trim(),
             department: document.getElementById('res-dept').value.trim(),
             status: document.getElementById('res-status').value
         };

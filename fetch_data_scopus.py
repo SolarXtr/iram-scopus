@@ -8,7 +8,6 @@ import time
 # Configuration
 API_KEY = "68e2bfd85d173bb9c601817d969e11e5"
 REGISTRY_FILE = "researchers.json"
-OUTPUT_FILE = "data.json"
 
 def load_researchers():
     """Loads the researcher registry from JSON file."""
@@ -439,8 +438,6 @@ def fetch_pubmed_data_for_author(researcher_name, researcher_dept, status="Activ
     return pubmed_results
 
 def main():
-    os.makedirs(os.path.dirname(os.path.abspath(OUTPUT_FILE)) or '.', exist_ok=True)
-    
     # 1. Load registry list
     researchers = load_researchers()
     print(f"Loaded {len(researchers)} researchers from registry.")
@@ -512,27 +509,58 @@ def main():
             
     final_results = list(unique_docs.values())
     
-    # 4. Save results or fallback to mock data
+    # 4. Push results to API
     if len(final_results) > 0 and scopus_success:
-        data = {
-            "status": "success",
-            "data_source": "scopus_api",
-            "retrieved_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "affiliation": "Faculty of Medicine, Naresuan University",
-            "total_results": len(final_results),
-            "results": final_results
-        }
+        data_to_push = final_results
     else:
         # Fallback to Sandbox mock data mapped to registry
-        data = get_mock_data(researchers)
+        data_to_push = get_mock_data(researchers)["results"]
         
-    # Include list of registered researchers in dataset
-    data["researchers"] = researchers
+    api_url = "https://iram-backend.tinnakornh.workers.dev/api/publications/import"
+    success_count = 0
+    error_count = 0
+
+    print(f"Pushing {len(data_to_push)} publications to {api_url}...")
+    for doc in data_to_push:
+        authors_payload = []
+        corresponding_author = doc.get("corresponding_author", "")
+        for idx, auth_name in enumerate(doc.get("authors", [])):
+            authors_payload.append({
+                "name": auth_name,
+                "order": idx + 1,
+                "isCorresponding": bool(corresponding_author and corresponding_author.lower() == auth_name.lower())
+            })
+            
+        # Ensure year is integer
+        try:
+            year_val = int(doc.get("year", 0))
+        except ValueError:
+            year_val = 0
+            
+        payload = {
+            "doi": doc.get("doi", ""),
+            "title": doc.get("title", ""),
+            "journal": doc.get("journal", ""),
+            "year": year_val,
+            "coverDate": doc.get("coverDate", ""),
+            "quartile": doc.get("quartile_scopus", "Q4"),
+            "status": "PUBLISHED",
+            "authors": authors_payload,
+            "databases": doc.get("databases", ["Scopus"])
+        }
         
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-        
-    print(f"Successfully saved database containing {len(data['results'])} publications to {OUTPUT_FILE}!")
+        try:
+            resp = requests.post(api_url, json=payload, timeout=10)
+            if resp.status_code in (200, 201):
+                success_count += 1
+            else:
+                error_count += 1
+                print(f"Failed to push {payload.get('doi') or payload.get('title')}: {resp.status_code} {resp.text}")
+        except Exception as e:
+            error_count += 1
+            print(f"Exception pushing {payload.get('doi') or payload.get('title')}: {e}")
+
+    print(f"API Push complete. Success: {success_count}, Errors: {error_count}")
 
 if __name__ == "__main__":
     main()

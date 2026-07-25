@@ -103,21 +103,66 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadData() {
         try {
             retrievedTimeEl.textContent = 'Loading dataset...';
-            const response = await fetch('data.json');
-            if (!response.ok) {
-                throw new Error('Failed to fetch publication data');
+            const [pubsResponse, resResponse] = await Promise.all([
+                fetch('https://iram-backend.tinnakornh.workers.dev/api/publications'),
+                fetch('https://iram-backend.tinnakornh.workers.dev/api/researchers')
+            ]);
+            
+            if (!pubsResponse.ok || !resResponse.ok) {
+                throw new Error('Failed to fetch data from API');
             }
-            database = await response.json();
+            
+            const pubsData = await pubsResponse.json();
+            const researchersData = await resResponse.json();
+
+            // Map backend schema to app.js expected schema
+            const mappedResults = pubsData.map(pub => {
+                let parsedAuthors = [];
+                if (pub.authors) {
+                    try {
+                        parsedAuthors = typeof pub.authors === 'string' ? JSON.parse(pub.authors) : pub.authors;
+                    } catch (e) {
+                        console.warn('Failed to parse authors for pub', pub.id);
+                    }
+                }
+                
+                let parsedDbs = ['Scopus'];
+                if (pub.sourceDatabases) {
+                    try {
+                        parsedDbs = typeof pub.sourceDatabases === 'string' ? JSON.parse(pub.sourceDatabases) : pub.sourceDatabases;
+                    } catch(e) {}
+                }
+                
+                return {
+                    id: pub.id,
+                    title: pub.title || 'Untitled',
+                    doi: pub.doi || '',
+                    journal: pub.journal || 'Unknown Journal',
+                    year: pub.year ? String(pub.year) : 'Unknown Year',
+                    coverDate: pub.coverDate || '',
+                    quartile_scopus: pub.quartile || '',
+                    quartile_scimago: pub.quartile || '',
+                    status: pub.status || '',
+                    authors: parsedAuthors,
+                    creator: parsedAuthors.length > 0 ? parsedAuthors[0] : 'Unknown',
+                    citations: pub.citations || 0,
+                    corresponding_author: pub.corresponding_author || null,
+                    databases: parsedDbs,
+                    departments: pub.departments || []
+                };
+            });
+
+            database = {
+                retrieved_at: new Date().toLocaleString(),
+                data_source: 'live_api',
+                results: mappedResults,
+                researchers: researchersData
+            };
             
             // UI Indicators update
             retrievedTimeEl.textContent = `Sync: ${database.retrieved_at}`;
-            if (database.data_source === 'mock_data') {
-                dataSourceBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <span>DataSource: Sandbox Mode</span>`;
-                dataSourceBadge.style.color = '#eab308';
-            } else {
-                dataSourceBadge.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>DataSource: Scopus API</span>`;
-                dataSourceBadge.style.color = '#14b8a6';
-            }
+            dataSourceBadge.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>DataSource: Live API</span>`;
+            dataSourceBadge.style.color = '#14b8a6';
 
             // Populate Year filter list
             populateYearFilter();
