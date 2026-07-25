@@ -118,9 +118,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Map backend schema to app.js expected schema
             const mappedResults = pubsData.map(pub => {
                 let parsedAuthors = [];
+                let corrAuthorStr = null;
                 if (pub.authors) {
                     try {
-                        parsedAuthors = typeof pub.authors === 'string' ? JSON.parse(pub.authors) : pub.authors;
+                        const authorsObjArray = typeof pub.authors === 'string' ? JSON.parse(pub.authors) : pub.authors;
+                        if (Array.isArray(authorsObjArray)) {
+                            parsedAuthors = authorsObjArray.map(a => typeof a === 'string' ? a : (a.name || ''));
+                            const corr = authorsObjArray.find(a => typeof a === 'object' && (a.isCorresponding === 1 || a.isCorresponding === true));
+                            if (corr) corrAuthorStr = corr.name;
+                        }
                     } catch (e) {
                         console.warn('Failed to parse authors for pub', pub.id);
                     }
@@ -146,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     authors: parsedAuthors,
                     creator: parsedAuthors.length > 0 ? parsedAuthors[0] : 'Unknown',
                     citations: pub.citations || 0,
-                    corresponding_author: pub.corresponding_author || null,
+                    corresponding_author: corrAuthorStr || pub.corresponding_author || null,
                     databases: parsedDbs,
                     departments: pub.departments || []
                 };
