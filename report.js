@@ -34,14 +34,14 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadData() {
         try {
             retrievedTimeEl.textContent = 'Loading dataset...';
-            const response = await fetch('data.json');
+            const response = await fetch('https://iram-backend.tinnakornh.workers.dev/api/publications');
             if (!response.ok) throw new Error('Failed to fetch dataset');
             
             database = await response.json();
             
             // Sync indicators
-            retrievedTimeEl.textContent = `Sync: ${database.retrieved_at}`;
-            if (database.data_source === 'mock_data') {
+            retrievedTimeEl.textContent = `Sync: ${new Date().toLocaleString()}`;
+            if (false) {
                 dataSourceBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <span>DataSource: Sandbox Mode</span>`;
                 dataSourceBadge.style.color = '#eab308';
             } else {
@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function populateYearFilter() {
-        const years = new Set(database.results.map(r => r.year).filter(y => y && y !== 'Unknown Year'));
+        const years = new Set(database.map(r => r.year).filter(y => y && y !== 'Unknown Year'));
         const sortedYears = Array.from(years).sort((a, b) => b - a);
         
         reportYearSelect.innerHTML = `
@@ -267,11 +267,11 @@ document.addEventListener('DOMContentLoaded', () => {
         activeQuartileSource = reportQuartileSelect.value;
 
         // Find maximum year in the dataset to calculate relative ranges dynamically
-        const years = database.results.map(r => parseInt(r.year, 10)).filter(y => !isNaN(y));
+        const years = database.map(r => parseInt(r.year, 10)).filter(y => !isNaN(y));
         const maxYear = years.length > 0 ? Math.max(...years) : new Date().getFullYear();
 
         // Apply Year Filter
-        filteredResults = database.results.filter(pub => {
+        filteredResults = database.filter(pub => {
             const pubYr = parseInt(pub.year, 10);
             if (currentYear === 'all') {
                 return true;
@@ -288,8 +288,8 @@ document.addEventListener('DOMContentLoaded', () => {
         filteredResults.sort((a, b) => {
             let valA, valB;
             if (sortField === 'no') {
-                valA = database.results.indexOf(a);
-                valB = database.results.indexOf(b);
+                valA = database.indexOf(a);
+                valB = database.indexOf(b);
             } else if (sortField === 'author') {
                 valA = (a.authors && a.authors[0] || '').toLowerCase();
                 valB = (b.authors && b.authors[0] || '').toLowerCase();

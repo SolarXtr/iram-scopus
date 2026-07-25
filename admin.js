@@ -69,20 +69,20 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadData() {
         try {
             // Load researchers from researchers.json
-            const resResp = await fetch('researchers.json');
+            const resResp = await fetch('https://iram-backend.tinnakornh.workers.dev/api/researchers');
             if (resResp.ok) {
                 researchers = await resResp.json();
             }
 
             // Load data.json for publications
-            const dataResp = await fetch('data.json');
+            const dataResp = await fetch('https://iram-backend.tinnakornh.workers.dev/api/publications');
             if (dataResp.ok) {
                 const db = await dataResp.json();
-                publications = db.results || [];
+                publications = db || [];
                 dbMetadata = {
                     status: db.status || "success",
                     data_source: db.data_source || "manual",
-                    retrieved_at: db.retrieved_at,
+                    retrieved_at: new Date().toLocaleString(),
                     affiliation: db.affiliation || "Faculty of Medicine, Naresuan University",
                     researchers: db.researchers || []
                 };
@@ -807,38 +807,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- GLOBAL SAVE API CALLS ---
-    btnGlobalSave.addEventListener('click', async () => {
-        try {
-            btnGlobalSave.disabled = true;
-            btnGlobalSave.querySelector('span').textContent = "Saving...";
-
-            // 1. Save researchers.json
-            const resSaveResp = await fetch('/api/researchers', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: jsonStringifyWithUnicode(researchers)
-            });
-
-            // 2. Save data.json
-            const pubSaveResp = await fetch('/api/publications', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: jsonStringifyWithUnicode(publications)
-            });
-
-            if (resSaveResp.ok && pubSaveResp.ok) {
-                showToast("Both files saved to disk successfully!");
-            } else {
-                throw new Error("One or more files failed to save.");
-            }
-        } catch (err) {
-            console.error("Save error:", err);
-            showToast("Failed to write to file system", "error");
-        } finally {
-            btnGlobalSave.disabled = false;
-            btnGlobalSave.querySelector('span').textContent = "Save to JSON Files";
-        }
-    });
+    btnGlobalSave.addEventListener('click', async () => { showToast('Data is managed by Python scripts via the live API. Read-only mode active.', 'warning'); });
 
     // --- ADMIN SYNC CONTROL ---
     if (btnAdminSync) {
@@ -1135,3 +1104,4 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- INITIAL DATA LOAD ---
     loadData();
 });
+
