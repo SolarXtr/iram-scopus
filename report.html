@@ -127,15 +127,140 @@
                 </a>
                 <a href="admin.html#manage-publications" class="nav-item">
                     <i class="fa-solid fa-book-bookmark"></i>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Publications Matrix Report - MedNU Research Analytics</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main CSS stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Matrix Spreadsheet Styling Adjustments */
+        .matrix-container {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            box-shadow: var(--shadow-sm);
+            overflow-x: auto;
+        }
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            font-family: var(--font-body);
+            white-space: nowrap;
+        }
+        .matrix-table th, .matrix-table td {
+            border: 1px solid #cbd5e1;
+            padding: 0.4rem 0.6rem;
+            text-align: left;
+        }
+        .matrix-table th {
+            background: #f1f5f9;
+            color: #0f172a;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .matrix-table thead tr:first-child th {
+            background: #e2e8f0;
+        }
+        .matrix-table thead tr.summary-row th {
+            background: #f8fafc;
+            font-weight: bold;
+            color: #0d9488;
+            font-size: 0.85rem;
+            border-bottom: 2px solid #94a3b8;
+        }
+        .matrix-table tbody tr:hover {
+            background: rgba(241, 245, 249, 0.5);
+        }
+        .matrix-table td.center, .matrix-table th.center {
+            text-align: center;
+        }
+        .matrix-table td.number, .matrix-table th.number {
+            text-align: right;
+            font-family: monospace;
+        }
+        .matrix-table .tick {
+            font-weight: bold;
+            color: #0d9488;
+            background: rgba(13, 148, 136, 0.05);
+        }
+        .matrix-table .tick-q2 {
+            font-weight: bold;
+            color: #2563eb;
+            background: rgba(37, 99, 235, 0.05);
+        }
+        .matrix-table .tick-q3 {
+            font-weight: bold;
+            color: #d97706;
+            background: rgba(217, 119, 6, 0.05);
+        }
+        .matrix-table .tick-q4 {
+            font-weight: bold;
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.05);
+        }
+        .text-wrap-title {
+            white-space: normal;
+            min-width: 250px;
+            max-width: 400px;
+        }
+        .text-wrap-authors {
+            white-space: normal;
+            min-width: 150px;
+            max-width: 250px;
+        }
+        .matrix-table th.sortable-header:hover {
+            background: #cbd5e1 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="glass-bg-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div class="logo-text">
+                    <h2>MedNU</h2>
+                    <span>Research Analytics</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="admin.html#manage-researchers" class="nav-item">
+                    <i class="fa-solid fa-user-doctor"></i>
+                    <span>Manage Researchers</span>
+                </a>
+                <a href="admin.html#manage-publications" class="nav-item">
+                    <i class="fa-solid fa-book-bookmark"></i>
                     <span>Manage Articles</span>
                 </a>
                 <a href="report.html" class="nav-item active">
                     <i class="fa-solid fa-file-invoice"></i>
                     <span>Reports Matrix</span>
-                </a>
-                <a href="glossary.html" class="nav-item">
-                    <i class="fa-solid fa-book-bookmark"></i>
-                    <span>Metrics Guide</span>
                 </a>
                 <a href="about.html" class="nav-item">
                     <i class="fa-solid fa-circle-info"></i>
@@ -249,13 +374,22 @@
                         </tbody>
                     </table>
                 </div>
+                
+                <!-- Metrics Guide Link below table -->
+                <div style="margin-top: 1.5rem; text-align: center;">
+                    <a href="glossary.html" style="display: inline-flex; align-items: center; gap: 0.5rem; background: var(--accent-blue); color: white; padding: 0.6rem 1.2rem; border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 0.95rem; box-shadow: var(--shadow-sm); transition: transform 0.2s;">
+                        <i class="fa-solid fa-book-bookmark"></i>
+                        คู่มือคำอธิบายตัวชี้วัด (Metrics Guide)
+                    </a>
+                </div>
             </div>
         </main>
     </div>
 
-    <!-- Script Import -->
     <script src="report.js"></script>
-<script src="analytics.js"></script>
+    <script src="analytics.js"></script>
 </body>
 </html>
 
+< / b o d y >  
+ 
