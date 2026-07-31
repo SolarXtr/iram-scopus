@@ -20,11 +20,11 @@ def load_researchers():
             
     # Default fallback list of researchers if registry file does not exist
     return [
-        {"author_id": "57209617104", "name": "Somchai Rattanasiri", "department": "Department of Surgery", "status": "Active"},
-        {"author_id": "57195977931", "name": "Tinnakorn Harnprasert", "department": "Department of Pediatrics", "status": "Active"},
-        {"author_id": "57218392019", "name": "Prasert Srivilas", "department": "Department of Internal Medicine", "status": "Active"},
-        {"author_id": "57222419080", "name": "Anan Wongsuwan", "department": "Department of Anesthesiology", "status": "Active"},
-        {"author_id": "57205492100", "name": "Siriwan Klinpratoom", "department": "Department of Radiology", "status": "Active"}
+        {"author_id": "57209617104", "name": "Somchai Rattanasiri", "department": "Department of Surgery", "status": "Active", "joinDate": None, "resignDate": None},
+        {"author_id": "57195977931", "name": "Tinnakorn Harnprasert", "department": "Department of Pediatrics", "status": "Active", "joinDate": None, "resignDate": None},
+        {"author_id": "57218392019", "name": "Prasert Srivilas", "department": "Department of Internal Medicine", "status": "Active", "joinDate": None, "resignDate": None},
+        {"author_id": "57222419080", "name": "Anan Wongsuwan", "department": "Department of Anesthesiology", "status": "Active", "joinDate": None, "resignDate": None},
+        {"author_id": "57205492100", "name": "Siriwan Klinpratoom", "department": "Department of Radiology", "status": "Active", "joinDate": None, "resignDate": None}
     ]
 
 def get_mock_data(researchers):
@@ -98,6 +98,7 @@ def get_mock_data(researchers):
         documents.append({
             "title": title,
             "creator": creator,
+            "creator_is_nu_affiliated": True,
             "authors": author_names,
             "corresponding_author": corresponding,
             "departments": depts,
@@ -174,7 +175,7 @@ def get_journal_quartiles(issn, journal_name):
         SERIAL_CACHE[issn] = res
     return res
 
-def fetch_scopus_data_for_author(author_id, researcher_name, researcher_dept, status="Active"):
+def fetch_scopus_data_for_author(author_id, researcher_name, researcher_dept, status="Active", join_date=None, resign_date=None):
     """Fetches publications for a specific author ID from Scopus."""
     print(f"Fetching publications for researcher: {researcher_name} (ID: {author_id}, Status: {status})...")
     url = "https://api.elsevier.com/content/search/scopus"
@@ -222,19 +223,34 @@ def fetch_scopus_data_for_author(author_id, researcher_name, researcher_dept, st
                     
                 doi = entry.get("prism:doi", "")
                 
+                aff_list = entry.get("affiliation", [])
+                if not isinstance(aff_list, list):
+                    aff_list = [aff_list] if aff_list else []
+                
+                has_nu_aff = False
+                for aff in aff_list:
+                    aff_name = str(aff.get("affilname", "")).lower()
+                    if "naresuan" in aff_name or "medicine" in aff_name:
+                        has_nu_aff = True
+                        break
+
+                is_nu_affiliated = False
+                if join_date or resign_date:
+                    pub_date_cmp = cover_date if cover_date != "Unknown Date" else f"{year}-01-01"
+                    valid_start = True
+                    valid_end = True
+                    if join_date and pub_date_cmp < join_date:
+                        valid_start = False
+                    if resign_date and pub_date_cmp > resign_date:
+                        valid_end = False
+                    if valid_start and valid_end:
+                        is_nu_affiliated = True
+                else:
+                    is_nu_affiliated = has_nu_aff
+                
                 # Check affiliation filter for resigned/inactive researchers
                 if status in ["Resigned", "Inactive"]:
-                    aff_list = entry.get("affiliation", [])
-                    if not isinstance(aff_list, list):
-                        aff_list = [aff_list] if aff_list else []
-                    
-                    has_nu_aff = False
-                    for aff in aff_list:
-                        aff_name = str(aff.get("affilname", "")).lower()
-                        if "naresuan" in aff_name or "medicine" in aff_name:
-                            has_nu_aff = True
-                            break
-                    if not has_nu_aff:
+                    if not is_nu_affiliated:
                         # Skip this publication as the resigned/inactive researcher was not affiliated with NU for this paper
                         continue
                 
@@ -272,6 +288,7 @@ def fetch_scopus_data_for_author(author_id, researcher_name, researcher_dept, st
                 author_results.append({
                     "title": title,
                     "creator": researcher_name,
+                    "creator_is_nu_affiliated": is_nu_affiliated,
                     "authors": cleaned_author_list,
                     "corresponding_author": creator if creator else researcher_name,
                     "departments": [researcher_dept],
@@ -417,6 +434,7 @@ def fetch_pubmed_data_for_author(researcher_name, researcher_dept, status="Activ
             pubmed_results.append({
                 "title": title,
                 "creator": researcher_name,
+                "creator_is_nu_affiliated": True,
                 "authors": cleaned_author_list,
                 "corresponding_author": researcher_name,
                 "departments": [researcher_dept],
@@ -450,7 +468,7 @@ def main():
         status = res.get("status", "Active")
         
         # A. Fetch from Scopus
-        res_pubs = fetch_scopus_data_for_author(res["author_id"], res["name"], res["department"], status)
+        res_pubs = fetch_scopus_data_for_author(res["author_id"], res["name"], res["department"], status, res.get("joinDate"), res.get("resignDate"))
         if len(res_pubs) > 0:
             all_results.extend(res_pubs)
         else:
@@ -524,11 +542,16 @@ def main():
     for doc in data_to_push:
         authors_payload = []
         corresponding_author = doc.get("corresponding_author", "")
+        creator_name = doc.get("creator", "")
+        creator_is_nu_affiliated = doc.get("creator_is_nu_affiliated", False)
+        
         for idx, auth_name in enumerate(doc.get("authors", [])):
+            is_nu = creator_is_nu_affiliated if auth_name == creator_name else False
             authors_payload.append({
                 "name": auth_name,
                 "order": idx + 1,
-                "isCorresponding": bool(corresponding_author and corresponding_author.lower() == auth_name.lower())
+                "isCorresponding": bool(corresponding_author and corresponding_author.lower() == auth_name.lower()),
+                "isNuAffiliated": is_nu
             })
             
         # Ensure year is integer

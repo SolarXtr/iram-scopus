@@ -611,12 +611,16 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('res-id').value = r.author_id;
             document.getElementById('res-orcid').value = r.orcid || "";
             document.getElementById('res-dept').value = r.department;
+            document.getElementById('res-join-date').value = r.joinDate || "";
+            document.getElementById('res-resign-date').value = r.resignDate || "";
             document.getElementById('res-status').value = r.status;
         } else {
             researcherModalTitle.textContent = "Add Researcher";
             researcherForm.reset();
             document.getElementById('researcher-idx').value = "";
             document.getElementById('res-orcid').value = "";
+            document.getElementById('res-join-date').value = "";
+            document.getElementById('res-resign-date').value = "";
         }
         researcherModal.classList.add('active');
     }
@@ -625,7 +629,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCancelResearcher.addEventListener('click', () => researcherModal.classList.remove('active'));
     document.getElementById('researcher-modal-close').addEventListener('click', () => researcherModal.classList.remove('active'));
 
-    researcherForm.addEventListener('submit', (e) => {
+    researcherForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const idx = document.getElementById('researcher-idx').value;
         const record = {
@@ -633,12 +637,37 @@ document.addEventListener('DOMContentLoaded', () => {
             author_id: document.getElementById('res-id').value.trim(),
             orcid: document.getElementById('res-orcid').value.trim(),
             department: document.getElementById('res-dept').value.trim(),
+            joinDate: document.getElementById('res-join-date').value,
+            resignDate: document.getElementById('res-resign-date').value,
             status: document.getElementById('res-status').value
         };
 
         if (idx !== "") {
-            researchers[parseInt(idx)] = record;
-            showToast("Researcher updated locally");
+            const oldRecord = researchers[parseInt(idx)];
+            const updatedRecord = { ...oldRecord, ...record };
+            researchers[parseInt(idx)] = updatedRecord;
+            
+            // Call API to update if id exists
+            if (updatedRecord.id) {
+                try {
+                    const btn = document.querySelector('#researcher-form button[type="submit"]');
+                    btn.disabled = true;
+                    btn.textContent = 'Saving...';
+                    const res = await fetch(`https://iram-backend.tinnakornh.workers.dev/api/researchers/${updatedRecord.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(record)
+                    });
+                    btn.disabled = false;
+                    btn.textContent = 'Save Details';
+                    if (!res.ok) throw new Error('API Error');
+                    showToast("Researcher updated successfully in DB");
+                } catch(e) {
+                    showToast("Failed to update researcher in DB");
+                }
+            } else {
+                showToast("Researcher updated locally");
+            }
         } else {
             researchers.push(record);
             showToast("Researcher added locally");

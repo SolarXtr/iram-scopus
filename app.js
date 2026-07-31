@@ -2,6 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Application State
     let database = null;
     let filteredResults = [];
+    let facultyResults = [];
+    let researchers = [];
     let currentYear = 'last5';
     
     // Pagination state
@@ -118,14 +120,19 @@ document.addEventListener('DOMContentLoaded', () => {
             // Map backend schema to app.js expected schema
             const mappedResults = pubsData.map(pub => {
                 let parsedAuthors = [];
+                let authorsRaw = [];
                 let corrAuthorStr = null;
+                let isFacultyAffiliated = false;
                 if (pub.authors) {
                     try {
                         const authorsObjArray = typeof pub.authors === 'string' ? JSON.parse(pub.authors) : pub.authors;
                         if (Array.isArray(authorsObjArray)) {
+                            authorsRaw = authorsObjArray;
                             parsedAuthors = authorsObjArray.map(a => typeof a === 'string' ? a : (a.name || ''));
                             const corr = authorsObjArray.find(a => typeof a === 'object' && (a.isCorresponding === 1 || a.isCorresponding === true));
                             if (corr) corrAuthorStr = corr.name;
+                            
+                            isFacultyAffiliated = authorsObjArray.some(a => typeof a === 'object' && (a.isNuAffiliated === 1 || a.isNuAffiliated === true));
                         }
                     } catch (e) {
                         console.warn('Failed to parse authors for pub', pub.id);
@@ -150,6 +157,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     quartile_scimago: pub.quartile || '',
                     status: pub.status || '',
                     authors: parsedAuthors,
+                    authorsRaw: authorsRaw,
+                    isFacultyAffiliated: isFacultyAffiliated,
                     creator: parsedAuthors.length > 0 ? parsedAuthors[0] : 'Unknown',
                     citations: pub.citations || 0,
                     corresponding_author: corrAuthorStr || pub.corresponding_author || null,
@@ -230,9 +239,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Compute KPIs & Charts (Year filtered, without search filter so dashboard remains consistent)
-        updateOverviewKPIs(filteredResults);
-        updateOverviewCharts(filteredResults);
+        // Compute KPIs & Charts ONLY for faculty affiliated papers
+        facultyResults = filteredResults.filter(pub => pub.isFacultyAffiliated);
+        updateOverviewKPIs(facultyResults);
+        updateOverviewCharts(facultyResults);
 
         // 2. Render Publications and Authors with search filters
         renderPublicationsTable();
@@ -732,8 +742,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderPublicationsTable() {
         const searchText = pubSearchInput.value.toLowerCase();
         
-        // Apply search filter on top of year filter
-        const searchFiltered = filteredResults.filter(pub => {
+        // Apply search filter on top of faculty-filtered results
+        const searchFiltered = facultyResults.filter(pub => {
             return (
                 pub.title.toLowerCase().includes(searchText) ||
                 pub.creator.toLowerCase().includes(searchText) ||
@@ -1007,14 +1017,31 @@ document.addEventListener('DOMContentLoaded', () => {
             const nuResearchers = [];
             const activeResList = database.researchers.filter(r => r.status === "Active" || !r.status);
             
-            pub.authors.forEach((author, index) => {
-                const matchedRes = matchResearcher(author, activeResList);
-                if (matchedRes) {
-                    const displayName = matchedRes.name;
-                    const formattedDisplay = formatAuthorName(displayName);
-                    nuResearchers.push(`<span class="researcher-tag-item" style="font-weight: 500; font-size: 0.85rem; color: var(--text-primary);">${formattedDisplay}<sup>${index + 1}</sup></span>`);
-                }
-            });
+            if (pub.authorsRaw && pub.authorsRaw.length > 0) {
+                pub.authorsRaw.forEach((rawAuth, index) => {
+                    if (typeof rawAuth !== 'object' || !rawAuth.name) return;
+                    const matchedRes = matchResearcher(rawAuth.name, activeResList);
+                    if (matchedRes) {
+                        const displayName = matchedRes.name;
+                        const formattedDisplay = formatAuthorName(displayName);
+                        const isAff = (rawAuth.isNuAffiliated === 1 || rawAuth.isNuAffiliated === true);
+                        if (isAff) {
+                            nuResearchers.push(`<span class="researcher-tag-item" style="font-weight: 500; font-size: 0.85rem; color: var(--text-primary);">${formattedDisplay}<sup>${index + 1}</sup></span>`);
+                        } else {
+                            nuResearchers.push(`<span class="researcher-tag-item" title="Non-NU Affiliation for this paper" style="font-weight: 400; font-size: 0.85rem; color: var(--text-muted); opacity: 0.6;">${formattedDisplay}*<sup>${index + 1}</sup></span>`);
+                        }
+                    }
+                });
+            } else {
+                pub.authors.forEach((author, index) => {
+                    const matchedRes = matchResearcher(author, activeResList);
+                    if (matchedRes) {
+                        const displayName = matchedRes.name;
+                        const formattedDisplay = formatAuthorName(displayName);
+                        nuResearchers.push(`<span class="researcher-tag-item" style="font-weight: 500; font-size: 0.85rem; color: var(--text-primary);">${formattedDisplay}<sup>${index + 1}</sup></span>`);
+                    }
+                });
+            }
             const researcherContent = nuResearchers.length > 0 
                 ? nuResearchers.join(', ') 
                 : `<span style="color: var(--text-muted); font-style: italic;">-</span>`;
@@ -1045,7 +1072,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 qBorderColor = 'rgba(239, 68, 68, 0.2)';
             }
             
-            const qDisplay = qVal || '-';
+            let evalYear = parseInt(pub.year);
+            if (!isNaN(evalYear)) {
+                evalYear = Math.min(evalYear, 2024); // Assume max evaluation year available is 2024
+            }
+            
+            const isNa = (!qVal || qVal === 'N/A' || qVal === 'Unknown');
+            const qDisplay = !isNa && !isNaN(evalYear) ? `${qVal} (${evalYear})` : (isNa ? 'N/A' : qVal);
             const tooltipText = `Scopus: ${qScopus} | SCImago: ${qScimago}`;
 
             tr.innerHTML = `
@@ -1127,10 +1160,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const authorStats = {};
         
         filteredResults.forEach(pub => {
-            pub.authors.forEach(auth => {
-                const cleanedAuth = auth.trim();
+            if (!pub.authorsRaw) return;
+            pub.authorsRaw.forEach(rawAuth => {
+                if (typeof rawAuth !== 'object' || !rawAuth.name) return;
+                const cleanedAuth = rawAuth.name.trim();
+                
                 if (registeredNames.has(cleanedAuth.toLowerCase())) {
-                    // Find official registry info for department
                     const regInfo = database.researchers.find(r => r.name.trim().toLowerCase() === cleanedAuth.toLowerCase());
                     const deptName = regInfo ? regInfo.department : (pub.departments ? pub.departments[0] : "Faculty of Medicine");
                     
@@ -1144,10 +1179,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             department: deptName
                         };
                     }
-                    authorStats[cleanedAuth].pubs++;
-                    authorStats[cleanedAuth].citations += pub.citations;
-                    authorStats[cleanedAuth].citationsList.push(pub.citations || 0);
-                    authorStats[cleanedAuth].journals.add(pub.journal);
+                    
+                    // Only count towards their KPIs if they were affiliated at the time of publication
+                    if (rawAuth.isNuAffiliated === 1 || rawAuth.isNuAffiliated === true) {
+                        authorStats[cleanedAuth].pubs++;
+                        authorStats[cleanedAuth].citations += (pub.citations || 0);
+                        authorStats[cleanedAuth].citationsList.push(pub.citations || 0);
+                        authorStats[cleanedAuth].journals.add(pub.journal);
+                    }
                 }
             });
         });
@@ -1254,13 +1293,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // Function to render researcher detail profile inside modal
     function showResearcherModal(authorName, authorDept) {
         // Filter publications belonging to this author
-        const authorPapers = database.results.filter(pub => 
+        const allAuthorPapers = database.results.filter(pub => 
             pub.authors.some(auth => auth.trim().toLowerCase() === authorName.trim().toLowerCase())
         );
 
-        const totalCites = authorPapers.reduce((sum, pub) => sum + pub.citations, 0);
-        const avgCites = authorPapers.length > 0 ? (totalCites / authorPapers.length).toFixed(1) : 0;
-        const citationsList = authorPapers.map(p => p.citations || 0);
+        // Separate affiliated vs non-affiliated
+        const affiliatedPapers = [];
+        const nonAffiliatedPapers = [];
+        
+        allAuthorPapers.forEach(pub => {
+            let isAff = false;
+            if (pub.authorsRaw) {
+                const rawMatch = pub.authorsRaw.find(a => typeof a === 'object' && a.name && a.name.trim().toLowerCase() === authorName.trim().toLowerCase());
+                if (rawMatch && (rawMatch.isNuAffiliated === 1 || rawMatch.isNuAffiliated === true)) {
+                    isAff = true;
+                }
+            }
+            if (isAff) affiliatedPapers.push(pub);
+            else nonAffiliatedPapers.push(pub);
+        });
+
+        // Compute stats ONLY from affiliated papers
+        const totalCites = affiliatedPapers.reduce((sum, pub) => sum + (pub.citations || 0), 0);
+        const avgCites = affiliatedPapers.length > 0 ? (totalCites / affiliatedPapers.length).toFixed(1) : 0;
+        const citationsList = affiliatedPapers.map(p => p.citations || 0);
         const hIndex = calculateHIndex(citationsList);
 
         // Set Profile details
@@ -1268,27 +1324,33 @@ document.addEventListener('DOMContentLoaded', () => {
         modalAuthorDept.textContent = authorDept;
         modalAvatar.textContent = authorName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
-        modalStatPubs.textContent = authorPapers.length;
+        modalStatPubs.textContent = affiliatedPapers.length;
         document.getElementById('modal-stat-hindex').textContent = hIndex;
         modalStatCitations.textContent = totalCites.toLocaleString();
         modalStatAvg.textContent = avgCites;
 
-        // Populate publication list inside modal
+        // Populate publication list inside modal (showing all)
         modalPubList.innerHTML = '';
-        if (authorPapers.length === 0) {
+        if (allAuthorPapers.length === 0) {
             modalPubList.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 2rem;">No publications recorded.</div>';
         } else {
-            authorPapers.forEach(paper => {
+            allAuthorPapers.forEach(paper => {
+                const isNonAff = nonAffiliatedPapers.includes(paper);
                 const item = document.createElement('div');
                 item.className = 'modal-pub-item';
+                if (isNonAff) {
+                    item.style.opacity = '0.7';
+                }
                 
                 const doiLink = paper.doi ? `
                     <a href="https://doi.org/${paper.doi}" target="_blank" class="doi-badge" style="margin-top: 0.4rem; display: inline-flex; align-items: center; gap: 0.3rem;">
                         <i class="fa-solid fa-link"></i> DOI: ${paper.doi}
                     </a>` : '';
 
+                const nonAffBadge = isNonAff ? `<span style="font-size: 0.75rem; color: #dc2626; background: rgba(220, 38, 38, 0.1); padding: 2px 6px; border-radius: 4px; margin-left: 8px; font-weight: 600;"><i class="fa-solid fa-triangle-exclamation"></i> ผลงานช่วงที่ไม่ได้สังกัดคณะแพทยฯ</span>` : '';
+
                 item.innerHTML = `
-                    <div class="modal-pub-title">${paper.title}</div>
+                    <div class="modal-pub-title">${paper.title}${nonAffBadge}</div>
                     <div class="modal-pub-meta">
                         <span><i class="fa-regular fa-folder-open"></i> ${paper.journal} (${paper.year})</span>
                         <span style="font-weight: 600; color: var(--accent-purple);"><i class="fa-solid fa-quote-right" style="font-size:0.75rem;"></i> Citations: ${paper.citations}</span>
