@@ -253,6 +253,33 @@
                     </div>
                 </section>
 
+                <!-- Manage Analytics Section -->
+                <section id="manage-analytics-section" class="dashboard-section">
+                    <div class="section-card">
+                        <div class="admin-controls">
+                            <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+                                <h2 style="font-size: 1.2rem; margin: 0;"><i class="fa-solid fa-chart-line" style="color: var(--accent-blue);"></i> Pageview Analytics</h2>
+                            </div>
+                            <button class="btn btn-refresh" id="btn-refresh-analytics" style="background: rgba(37, 99, 235, 0.1); color: var(--accent-blue);"><i class="fa-solid fa-arrows-rotate"></i> Refresh Data</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40%;">Path</th>
+                                        <th style="width: 20%; text-align: center;">Total Views</th>
+                                        <th style="width: 20%; text-align: center;">Views This Month</th>
+                                        <th style="width: 20%; text-align: center;">Views Today</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="analytics-admin-tbody">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Manage Publications Section -->
                 <section id="manage-publications-section" class="dashboard-section active">
                     <div class="section-card">
@@ -464,5 +491,9 @@
     </div>
 
     <script src="admin.js"></script>
+<script src="analytics.js"></script>
 </body>
 </html>
+
+
+

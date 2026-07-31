@@ -13,8 +13,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const navResearchers = document.getElementById('nav-manage-researchers');
     const navPublications = document.getElementById('nav-manage-publications');
+    const navAnalytics = document.getElementById('nav-manage-analytics');
+    
     const secResearchers = document.getElementById('manage-researchers-section');
     const secPublications = document.getElementById('manage-publications-section');
+    const secAnalytics = document.getElementById('manage-analytics-section');
 
     const researcherTbody = document.getElementById('researcher-admin-tbody');
     const publicationTbody = document.getElementById('publication-admin-tbody');
@@ -49,21 +52,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- TAB SYSTEM NAVIGATION ---
     function switchTab(target) {
+        navResearchers.classList.remove('active');
+        navPublications.classList.remove('active');
+        if(navAnalytics) navAnalytics.classList.remove('active');
+        secResearchers.classList.remove('active');
+        secPublications.classList.remove('active');
+        if(secAnalytics) secAnalytics.classList.remove('active');
+
         if (target === 'researchers') {
             navResearchers.classList.add('active');
-            navPublications.classList.remove('active');
             secResearchers.classList.add('active');
-            secPublications.classList.remove('active');
+        } else if (target === 'analytics') {
+            if(navAnalytics) navAnalytics.classList.add('active');
+            if(secAnalytics) secAnalytics.classList.add('active');
+            loadAnalytics();
         } else {
-            navResearchers.classList.remove('active');
             navPublications.classList.add('active');
-            secResearchers.classList.remove('active');
             secPublications.classList.add('active');
         }
     }
 
     navResearchers.addEventListener('click', (e) => { e.preventDefault(); switchTab('researchers'); });
     navPublications.addEventListener('click', (e) => { e.preventDefault(); switchTab('publications'); });
+    if(navAnalytics) navAnalytics.addEventListener('click', (e) => { e.preventDefault(); switchTab('analytics'); });
+    
+    const btnRefreshAnalytics = document.getElementById('btn-refresh-analytics');
+    if(btnRefreshAnalytics) btnRefreshAnalytics.addEventListener('click', () => loadAnalytics());
+
+    async function loadAnalytics() {
+        try {
+            const resp = await fetch('https://iram-backend.tinnakornh.workers.dev/api/analytics/summary');
+            if (resp.ok) {
+                const data = await resp.json();
+                renderAnalytics(data);
+            }
+        } catch (e) {
+            console.error('Failed to load analytics', e);
+        }
+    }
+    
+    function renderAnalytics(data) {
+        const tbody = document.getElementById('analytics-admin-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row.domain}${row.path}</td>
+                <td style="text-align: center;"><span class="db-badge" style="background: #2563eb;">${row.totalViews}</span></td>
+                <td style="text-align: center;"><span class="db-badge" style="background: #059669;">${row.viewsThisMonth}</span></td>
+                <td style="text-align: center;"><span class="db-badge" style="background: #ea580c;">${row.viewsToday}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
 
     // --- DATA FETCHING ---
     async function loadData() {
