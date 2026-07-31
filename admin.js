@@ -99,9 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${row.domain}${row.path}</td>
-                <td style="text-align: center;"><span class="db-badge" style="background: #2563eb;">${row.totalViews}</span></td>
-                <td style="text-align: center;"><span class="db-badge" style="background: #059669;">${row.viewsThisMonth}</span></td>
-                <td style="text-align: center;"><span class="db-badge" style="background: #ea580c;">${row.viewsToday}</span></td>
+                <td style="text-align: center;"><span class="db-badge" style="background: #2563eb; color: white;">${row.totalViews}</span></td>
+                <td style="text-align: center;"><span class="db-badge" style="background: #059669; color: white;">${row.viewsThisMonth}</span></td>
+                <td style="text-align: center;"><span class="db-badge" style="background: #ea580c; color: white;">${row.viewsToday}</span></td>
             `;
             tbody.appendChild(tr);
         });
