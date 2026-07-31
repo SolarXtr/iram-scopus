@@ -31,9 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const researcherSummaryContainer = document.getElementById('researcher-summary-container');
     const publicationSummaryContainer = document.getElementById('publication-summary-container');
 
-    const btnGlobalSave = document.getElementById('btn-global-save');
-    const btnAdminSync = document.getElementById('btn-admin-sync');
-
     // Modals & Forms
     const researcherModal = document.getElementById('researcher-form-modal');
     const researcherForm = document.getElementById('researcher-form');
@@ -557,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </td>
                 <td style="font-size:0.85rem;">${pub.journal}</td>
-                <td style="text-align: center; font-weight:500;">${pub.year}</td>
+                <td style="text-align: center; font-weight:500;">${pub.year ? parseInt(pub.year, 10) : ''}</td>
                 <td style="text-align: center;">
                     <span class="badge" style="background: rgba(124, 58, 237, 0.1); color: var(--accent-purple); font-weight:bold; padding:0.2rem 0.5rem; border-radius:6px;">
                         ${pub.citations}
@@ -566,10 +563,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td style="text-align: center;">
                     <div style="display: flex; flex-direction: column; gap: 0.2rem; align-items: center;">
                         <span class="badge" style="background: rgba(13, 148, 136, 0.1); color: var(--accent-teal); font-size: 0.75rem; padding: 0.15rem 0.35rem; border-radius: 4px; font-weight: bold; border: 1px solid rgba(13, 148, 136, 0.15);">
-                            Scopus: ${pub.quartile_scopus || '-'}
+                            Scopus: ${pub.quartile || '-'}
                         </span>
                         <span class="badge" style="background: rgba(37, 99, 235, 0.1); color: var(--accent-blue); font-size: 0.75rem; padding: 0.15rem 0.35rem; border-radius: 4px; font-weight: bold; border: 1px solid rgba(37, 99, 235, 0.15);">
-                            SJR: ${pub.quartile_scimago || '-'}
+                            SJR: ${pub.quartile || '-'}
                         </span>
                     </div>
                 </td>
@@ -875,44 +872,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderResearchers();
             }
         });
-    });
-
-    // --- GLOBAL SAVE API CALLS ---
-    btnGlobalSave.addEventListener('click', async () => { showToast('Data is managed by Python scripts via the live API. Read-only mode active.', 'warning'); });
-
-    // --- ADMIN SYNC CONTROL ---
-    if (btnAdminSync) {
-        btnAdminSync.addEventListener('click', async () => {
-            btnAdminSync.disabled = true;
-            const icon = btnAdminSync.querySelector('i');
-            if (icon) icon.className = 'fa-solid fa-arrows-rotate fa-spin';
-            const span = btnAdminSync.querySelector('span');
-            if (span) span.textContent = 'Syncing...';
-            
-            try {
-                const response = await fetch('/api/sync', { method: 'POST' });
-                if (response.ok) {
-                    showToast("Scopus Ingestion Sync started in background...");
-                    setTimeout(async () => {
-                        await loadData();
-                        btnAdminSync.disabled = false;
-                        if (icon) icon.className = 'fa-solid fa-arrows-rotate';
-                        if (span) span.textContent = 'Sync from Scopus';
-                        showToast("Dataset updated successfully!");
-                    }, 4000);
-                } else {
-                    throw new Error('Sync endpoint returned error');
-                }
-            } catch (err) {
-                console.error('Trigger sync error:', err);
-                showToast("Failed to trigger API sync", "error");
-                btnAdminSync.disabled = false;
-                if (icon) icon.className = 'fa-solid fa-arrows-rotate';
-                if (span) span.textContent = 'Sync from Scopus';
-            }
-        });
-    }
-
     // --- REPORT GENERATION EXPORTS ---
     const btnExportCsv = document.getElementById('btn-export-csv');
     const btnExportWord = document.getElementById('btn-export-word');
