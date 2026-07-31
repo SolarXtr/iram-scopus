@@ -70,8 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalPubList = document.getElementById('modal-pub-list');
 
     // --- NAVIGATION LOGIC ---
-    const navItems = [navOverview, navPublications, navAuthors];
-    const sections = [secOverview, secPublications, secAuthors];
+    const navItems = [navOverview, navPublications, navAuthors].filter(Boolean);
+    const sections = [secOverview, secPublications, secAuthors].filter(Boolean);
 
     function switchSection(targetId) {
         navItems.forEach(item => {
@@ -1370,3 +1370,4 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- INITIAL BOOTSTRAP ---
     loadData();
 });
+
