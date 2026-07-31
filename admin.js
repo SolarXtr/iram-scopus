@@ -872,6 +872,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderResearchers();
             }
         });
+    });
+
     // --- REPORT GENERATION EXPORTS ---
     const btnExportCsv = document.getElementById('btn-export-csv');
     const btnExportWord = document.getElementById('btn-export-word');
