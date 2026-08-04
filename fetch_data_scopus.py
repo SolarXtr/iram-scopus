@@ -131,8 +131,8 @@ def get_journal_quartiles(issn, journal_name):
     if issn and issn in SERIAL_CACHE:
         return SERIAL_CACHE[issn]
 
-    q_scopus = "Q3" # Fallback defaults
-    q_scimago = "Q3"
+    q_scopus = "N/A" # Fallback defaults
+    q_scimago = "N/A"
 
     # API check if key available
     if issn and API_KEY:
@@ -158,11 +158,6 @@ def get_journal_quartiles(issn, journal_name):
                             else: q_scopus = "Q4"
         except Exception:
             pass
-
-    # Algorithmic SCImago fallback mapping
-    h = hash(journal_name) % 4
-    qs = ["Q1", "Q2", "Q3", "Q4"]
-    q_scimago = qs[h]
 
     # Specific override rules for Q1 journals
     j_lower = journal_name.lower()
@@ -230,23 +225,14 @@ def fetch_scopus_data_for_author(author_id, researcher_name, researcher_dept, st
                 has_nu_aff = False
                 for aff in aff_list:
                     aff_name = str(aff.get("affilname", "")).lower()
-                    if "naresuan" in aff_name or "medicine" in aff_name:
+                    if ("naresuan" in aff_name and "medicine" in aff_name) or \
+                       "naresuan university hospital" in aff_name or \
+                       "คณะแพทยศาสตร์ มหาวิทยาลัยนเรศวร" in aff_name or \
+                       "โรงพยาบาลมหาวิทยาลัยนเรศวร" in aff_name:
                         has_nu_aff = True
                         break
 
-                is_nu_affiliated = False
-                if join_date or resign_date:
-                    pub_date_cmp = cover_date if cover_date != "Unknown Date" else f"{year}-01-01"
-                    valid_start = True
-                    valid_end = True
-                    if join_date and pub_date_cmp < join_date:
-                        valid_start = False
-                    if resign_date and pub_date_cmp > resign_date:
-                        valid_end = False
-                    if valid_start and valid_end:
-                        is_nu_affiliated = True
-                else:
-                    is_nu_affiliated = has_nu_aff
+                is_nu_affiliated = has_nu_aff
                 
                 # Check affiliation filter for resigned/inactive researchers
                 if status in ["Resigned", "Inactive"]:
@@ -407,7 +393,8 @@ def fetch_pubmed_data_for_author(researcher_name, researcher_dept, status="Activ
                     break
                     
             issn = ""
-            q_scopus, q_scimago = get_journal_quartiles(issn, journal)
+            q_scopus = "N/A"
+            q_scimago = "N/A"
             
             authors = uid_data.get("authors", [])
             author_list = []
@@ -566,7 +553,8 @@ def main():
             "journal": doc.get("journal", ""),
             "year": year_val,
             "coverDate": doc.get("coverDate", ""),
-            "quartile": doc.get("quartile_scopus", "Q4"),
+            "quartile": doc.get("quartile_scopus", "N/A"),
+            "quartile_scimago": doc.get("quartile_scimago", "N/A"),
             "status": "PUBLISHED",
             "authors": authors_payload,
             "databases": doc.get("databases", ["Scopus"]),

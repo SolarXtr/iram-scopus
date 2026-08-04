@@ -342,17 +342,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Quartile distribution calculations
         let q12Count = 0;
+        let validQuartileDocs = 0;
         data.forEach(pub => {
             const qVal = activeQuartileSource === 'scopus' ? pub.quartile_scopus : pub.quartile_scimago;
-            if (qVal === 'Q1' || qVal === 'Q2') {
-                q12Count++;
+            if (qVal && qVal !== 'N/A' && qVal !== 'Unknown') {
+                validQuartileDocs++;
+                if (qVal === 'Q1' || qVal === 'Q2') {
+                    q12Count++;
+                }
             }
         });
-        const qRate = totalDocs > 0 ? ((q12Count / totalDocs) * 100).toFixed(0) : 0;
+        const qRate = validQuartileDocs > 0 ? ((q12Count / validQuartileDocs) * 100).toFixed(0) : 0;
         const kpiQRate = document.getElementById('kpi-q-rate');
         const kpiQCount = document.getElementById('kpi-q-count');
         if (kpiQRate) kpiQRate.textContent = `${qRate}%`;
-        if (kpiQCount) kpiQCount.textContent = `${q12Count} of ${totalDocs} articles`;
+        if (kpiQCount) kpiQCount.textContent = `${q12Count} of ${validQuartileDocs} articles`;
     }
 
     // --- CHART GENERATION ---
@@ -999,7 +1003,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Generate database source badges
             const dbList = pub.databases || ["Scopus"];
-            const dbBadgesHtml = dbList.map(db => {
+            const dbBadgesHtml = dbList.filter(db => db.trim().toLowerCase() !== "orcid").map(db => {
                 const cleanDb = db.trim();
                 let icon = "fa-solid fa-graduation-cap";
                 let badgeClass = "db-badge-scopus";
@@ -1077,8 +1081,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 evalYear = Math.min(evalYear, 2024); // Assume max evaluation year available is 2024
             }
             
-            const isNa = (!qVal || qVal === 'N/A' || qVal === 'Unknown');
-            const qDisplay = !isNa && !isNaN(evalYear) ? `${qVal} (${evalYear})` : (isNa ? 'N/A' : qVal);
+            const qValDisplay = (!qVal || qVal === 'N/A' || qVal === 'Unknown') ? 'N/A' : qVal;
+            const qDisplay = !isNaN(evalYear) ? `${qValDisplay} (${evalYear})` : qValDisplay;
             const tooltipText = `Scopus: ${qScopus} | SCImago: ${qScimago}`;
 
             tr.innerHTML = `
@@ -1339,7 +1343,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const item = document.createElement('div');
                 item.className = 'modal-pub-item';
                 if (isNonAff) {
-                    item.style.opacity = '0.7';
+                    item.style.opacity = '0.5';
                 }
                 
                 const doiLink = paper.doi ? `
@@ -1347,7 +1351,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <i class="fa-solid fa-link"></i> DOI: ${paper.doi}
                     </a>` : '';
 
-                const nonAffBadge = isNonAff ? `<span style="font-size: 0.75rem; color: #dc2626; background: rgba(220, 38, 38, 0.1); padding: 2px 6px; border-radius: 4px; margin-left: 8px; font-weight: 600;"><i class="fa-solid fa-triangle-exclamation"></i> ผลงานช่วงที่ไม่ได้สังกัดคณะแพทยฯ</span>` : '';
+                const nonAffBadge = isNonAff ? `<span style="font-size: 0.75rem; color: #dc2626; background: rgba(220, 38, 38, 0.1); padding: 2px 6px; border-radius: 4px; margin-left: 8px; font-weight: 600;"><i class="fa-solid fa-triangle-exclamation"></i> [ผลงานส่วนตัว]</span>` : '';
 
                 item.innerHTML = `
                     <div class="modal-pub-title">${paper.title}${nonAffBadge}</div>

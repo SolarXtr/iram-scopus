@@ -628,7 +628,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>` : '';
 
             const dbList = pub.databases || ["Scopus"];
-            const dbBadgesHtml = dbList.map(db => {
+            const dbBadgesHtml = dbList.filter(db => db.trim().toLowerCase() !== "orcid").map(db => {
                 const cleanDb = db.trim();
                 let badgeClass = "db-badge-scopus";
                 if (cleanDb.toLowerCase() === "pubmed") {
@@ -661,13 +661,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     </span>
                 </td>
                 <td style="text-align: center;">
-                    <div style="display: flex; flex-direction: column; gap: 0.2rem; align-items: center;">
-                        <span class="badge" style="background: rgba(13, 148, 136, 0.1); color: var(--accent-teal); font-size: 0.75rem; padding: 0.15rem 0.35rem; border-radius: 4px; font-weight: bold; border: 1px solid rgba(13, 148, 136, 0.15);">
-                            Scopus: ${pub.quartile || '-'}
-                        </span>
-                        <span class="badge" style="background: rgba(37, 99, 235, 0.1); color: var(--accent-blue); font-size: 0.75rem; padding: 0.15rem 0.35rem; border-radius: 4px; font-weight: bold; border: 1px solid rgba(37, 99, 235, 0.15);">
-                            SJR: ${pub.quartile || '-'}
-                        </span>
+                    <div style="display: flex; flex-direction: column; gap: 0.2rem; align-items: center; position: relative;">
+                        <select class="admin-quartile-select" data-id="${pub.id}" data-idx="${originalIndex}" style="padding: 0.2rem; border-radius: 4px; border: 1px solid var(--border-color); font-size: 0.75rem; background: #fff;">
+                            <option value="Q1" ${pub.quartile === 'Q1' ? 'selected' : ''}>Q1</option>
+                            <option value="Q2" ${pub.quartile === 'Q2' ? 'selected' : ''}>Q2</option>
+                            <option value="Q3" ${pub.quartile === 'Q3' ? 'selected' : ''}>Q3</option>
+                            <option value="Q4" ${pub.quartile === 'Q4' ? 'selected' : ''}>Q4</option>
+                            <option value="N/A" ${!pub.quartile || pub.quartile === 'N/A' || pub.quartile === 'Unknown' ? 'selected' : ''}>N/A</option>
+                        </select>
+                        <span class="save-indicator" id="save-indicator-${pub.id}" style="font-size: 0.7rem; color: var(--accent-teal); display: none;"><i class="fa-solid fa-check"></i> Saved</span>
                     </div>
                 </td>
                 <td style="text-align: center; white-space: nowrap;">
@@ -679,6 +681,42 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Add event listeners
+        publicationTbody.querySelectorAll('.admin-quartile-select').forEach(sel => {
+            sel.addEventListener('change', async (e) => {
+                const pubId = sel.getAttribute('data-id');
+                const idx = sel.getAttribute('data-idx');
+                const newVal = sel.value;
+                const indicator = document.getElementById(`save-indicator-${pubId}`);
+                
+                sel.disabled = true;
+                indicator.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving';
+                indicator.style.color = 'var(--accent-blue)';
+                indicator.style.display = 'block';
+
+                try {
+                    const res = await fetch(`https://iram-backend.tinnakornh.workers.dev/api/publications/${pubId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ quartile: newVal })
+                    });
+                    if (!res.ok) throw new Error('API Error');
+                    
+                    publications[idx].quartile = newVal;
+                    publications[idx].quartile_scopus = newVal;
+                    publications[idx].quartile_scimago = newVal;
+                    
+                    indicator.innerHTML = '<i class="fa-solid fa-check"></i> Saved';
+                    indicator.style.color = 'var(--accent-teal)';
+                    setTimeout(() => { if(indicator) indicator.style.display = 'none'; }, 2000);
+                } catch(err) {
+                    indicator.innerHTML = '<i class="fa-solid fa-xmark"></i> Error';
+                    indicator.style.color = 'red';
+                } finally {
+                    sel.disabled = false;
+                }
+            });
+        });
+
         publicationTbody.querySelectorAll('.btn-edit').forEach(btn => {
             btn.addEventListener('click', () => {
                 const idx = parseInt(btn.getAttribute('data-idx'));
