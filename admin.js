@@ -76,6 +76,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnRefreshAnalytics = document.getElementById('btn-refresh-analytics');
     if(btnRefreshAnalytics) btnRefreshAnalytics.addEventListener('click', () => loadAnalytics());
 
+    let trendChart = null;
+    let deviceChart = null;
+    let countryChart = null;
+    let referrerChart = null;
+    let resolutionChart = null;
+
     async function loadAnalytics() {
         try {
             const resp = await fetch('https://iram-backend.tinnakornh.workers.dev/api/analytics/summary');
@@ -83,11 +89,105 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await resp.json();
                 renderAnalytics(data);
             }
+            
+            const dashResp = await fetch('https://iram-backend.tinnakornh.workers.dev/api/analytics/dashboard');
+            if (dashResp.ok) {
+                const dashData = await dashResp.json();
+                renderCharts(dashData);
+            }
         } catch (e) {
             console.error('Failed to load analytics', e);
         }
     }
     
+    function renderCharts(data) {
+        if (typeof Chart === 'undefined') return; // Chart.js not loaded
+        
+        const safeDestroy = (chartObj) => { if (chartObj) chartObj.destroy(); };
+        const chartColors = ['#2563eb', '#059669', '#ea580c', '#7c3aed', '#db2777', '#0891b2', '#ca8a04', '#4f46e5', '#dc2626', '#16a34a'];
+
+        // 1. Trend Line Chart
+        safeDestroy(trendChart);
+        trendChart = new Chart(document.getElementById('chart-trend'), {
+            type: 'line',
+            data: {
+                labels: data.trend.map(d => d.date),
+                datasets: [{
+                    label: 'Pageviews',
+                    data: data.trend.map(d => d.count),
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        // 2. Devices Doughnut Chart
+        safeDestroy(deviceChart);
+        deviceChart = new Chart(document.getElementById('chart-devices'), {
+            type: 'doughnut',
+            data: {
+                labels: data.devices.map(d => d.label || 'Unknown'),
+                datasets: [{
+                    data: data.devices.map(d => d.count),
+                    backgroundColor: chartColors
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+
+        // 3. Countries Bar Chart
+        safeDestroy(countryChart);
+        countryChart = new Chart(document.getElementById('chart-countries'), {
+            type: 'bar',
+            data: {
+                labels: data.countries.map(d => d.label || 'Unknown'),
+                datasets: [{
+                    label: 'Views',
+                    data: data.countries.map(d => d.count),
+                    backgroundColor: '#059669',
+                    borderRadius: 4
+                }]
+            },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        // 4. Referrers Bar Chart
+        safeDestroy(referrerChart);
+        referrerChart = new Chart(document.getElementById('chart-referrers'), {
+            type: 'bar',
+            data: {
+                labels: data.referrers.map(d => d.label || 'Direct'),
+                datasets: [{
+                    label: 'Visits',
+                    data: data.referrers.map(d => d.count),
+                    backgroundColor: '#7c3aed',
+                    borderRadius: 4
+                }]
+            },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        // 5. Resolutions Bar Chart
+        safeDestroy(resolutionChart);
+        resolutionChart = new Chart(document.getElementById('chart-resolutions'), {
+            type: 'bar',
+            data: {
+                labels: data.resolutions.map(d => d.label || 'Unknown'),
+                datasets: [{
+                    label: 'Views',
+                    data: data.resolutions.map(d => d.count),
+                    backgroundColor: '#db2777',
+                    borderRadius: 4
+                }]
+            },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+    }
+
     function renderAnalytics(data) {
         const tbody = document.getElementById('analytics-admin-tbody');
         if (!tbody) return;
