@@ -261,34 +261,44 @@
                         <!-- Charts Grid -->
                         <div class="analytics-dashboard" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
                             <!-- Trend Chart -->
-                            <div class="stat-card" style="grid-column: 1 / -1; min-height: 300px;">
-                                <h3 style="font-size: 1rem; margin-bottom: 1rem; color: var(--text-secondary);"><i class="fa-solid fa-arrow-trend-up"></i> Daily Pageviews (Last 30 Days)</h3>
-                                <canvas id="chart-trend"></canvas>
+                            <div class="stat-card" style="grid-column: 1 / -1; display: flex; flex-direction: column; height: 350px;">
+                                <h3 style="font-size: 1rem; margin-bottom: 1rem; color: var(--text-secondary); flex-shrink: 0;"><i class="fa-solid fa-arrow-trend-up"></i> Daily Pageviews (Last 30 Days)</h3>
+                                <div style="position: relative; flex-grow: 1; min-height: 0; width: 100%;">
+                                    <canvas id="chart-trend"></canvas>
+                                </div>
                             </div>
                             
                             <!-- Devices & Resolutions -->
-                            <div class="stat-card" style="min-height: 250px;">
-                                <h3 style="font-size: 1rem; margin-bottom: 1rem; color: var(--text-secondary);"><i class="fa-solid fa-mobile-screen-button"></i> Device Types</h3>
-                                <canvas id="chart-devices"></canvas>
+                            <div class="stat-card" style="display: flex; flex-direction: column; height: 300px;">
+                                <h3 style="font-size: 1rem; margin-bottom: 1rem; color: var(--text-secondary); flex-shrink: 0;"><i class="fa-solid fa-mobile-screen-button"></i> Device Types</h3>
+                                <div style="position: relative; flex-grow: 1; min-height: 0; width: 100%;">
+                                    <canvas id="chart-devices"></canvas>
+                                </div>
                             </div>
                             
                             <!-- Countries -->
-                            <div class="stat-card" style="min-height: 250px;">
-                                <h3 style="font-size: 1rem; margin-bottom: 1rem; color: var(--text-secondary);"><i class="fa-solid fa-earth-americas"></i> Top Countries</h3>
-                                <canvas id="chart-countries"></canvas>
+                            <div class="stat-card" style="display: flex; flex-direction: column; height: 300px;">
+                                <h3 style="font-size: 1rem; margin-bottom: 1rem; color: var(--text-secondary); flex-shrink: 0;"><i class="fa-solid fa-earth-americas"></i> Top Countries</h3>
+                                <div style="position: relative; flex-grow: 1; min-height: 0; width: 100%;">
+                                    <canvas id="chart-countries"></canvas>
+                                </div>
                             </div>
                         </div>
                         
                         <div class="analytics-dashboard" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
                             <!-- Referrers -->
-                            <div class="stat-card" style="min-height: 250px;">
-                                <h3 style="font-size: 1rem; margin-bottom: 1rem; color: var(--text-secondary);"><i class="fa-solid fa-link"></i> Top Referrers</h3>
-                                <canvas id="chart-referrers"></canvas>
+                            <div class="stat-card" style="display: flex; flex-direction: column; height: 300px;">
+                                <h3 style="font-size: 1rem; margin-bottom: 1rem; color: var(--text-secondary); flex-shrink: 0;"><i class="fa-solid fa-link"></i> Top Referrers</h3>
+                                <div style="position: relative; flex-grow: 1; min-height: 0; width: 100%;">
+                                    <canvas id="chart-referrers"></canvas>
+                                </div>
                             </div>
                             <!-- Resolutions -->
-                            <div class="stat-card" style="min-height: 250px;">
-                                <h3 style="font-size: 1rem; margin-bottom: 1rem; color: var(--text-secondary);"><i class="fa-solid fa-desktop"></i> Screen Resolutions</h3>
-                                <canvas id="chart-resolutions"></canvas>
+                            <div class="stat-card" style="display: flex; flex-direction: column; height: 300px;">
+                                <h3 style="font-size: 1rem; margin-bottom: 1rem; color: var(--text-secondary); flex-shrink: 0;"><i class="fa-solid fa-desktop"></i> Screen Resolutions</h3>
+                                <div style="position: relative; flex-grow: 1; min-height: 0; width: 100%;">
+                                    <canvas id="chart-resolutions"></canvas>
+                                </div>
                             </div>
                         </div>
 
