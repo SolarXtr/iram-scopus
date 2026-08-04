@@ -15,6 +15,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const domain = window.location.hostname || 'localhost';
         const path = window.location.pathname || '/';
         const userAgent = navigator.userAgent;
+        const resolution = `${window.screen.width}x${window.screen.height}`;
+        const language = navigator.language || '';
+        const referrer = document.referrer || '';
+        
+        let deviceType = 'Desktop';
+        if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(userAgent.toLowerCase())) {
+            deviceType = 'Tablet';
+        } else if (/Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(userAgent)) {
+            deviceType = 'Mobile';
+        }
 
         // 3. Send Analytics Data
         const API_URL = 'https://iram-backend.tinnakornh.workers.dev/api/analytics/view';
@@ -28,7 +38,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 domain: domain,
                 path: path,
                 sessionId: sessionId,
-                userAgent: userAgent
+                userAgent: userAgent,
+                resolution: resolution,
+                language: language,
+                referrer: referrer,
+                deviceType: deviceType
             })
         }).catch(err => console.warn('Analytics tracking failed:', err));
     } catch (e) {
