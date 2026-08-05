@@ -803,8 +803,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast("Researcher updated locally");
             }
         } else {
-            researchers.push(record);
-            showToast("Researcher added locally");
+            // Adding a new researcher
+            const saveBtn = researcherForm.querySelector('button[type="submit"]');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            fetch(`https://iram-backend.tinnakornh.workers.dev/api/researchers`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(record)
+            }).then(res => res.json()).then(resData => {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Details';
+                if (resData.id) {
+                    record.id = resData.id;
+                    researchers.push(record);
+                    renderResearchers();
+                    showToast("Researcher added successfully to DB");
+                } else {
+                    showToast("Failed to add researcher in DB: " + (resData.error || "Unknown"), "error");
+                }
+            }).catch(err => {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Details';
+                showToast("Failed to add researcher in DB", "error");
+            });
         }
         researcherModal.classList.remove('active');
         renderResearchers();
