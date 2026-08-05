@@ -9,23 +9,22 @@ import time
 API_KEY = "68e2bfd85d173bb9c601817d969e11e5"
 REGISTRY_FILE = "researchers.json"
 
+BACKEND_URL = "https://iram-backend.tinnakornh.workers.dev"
+
 def load_researchers():
-    """Loads the researcher registry from JSON file."""
-    if os.path.exists(REGISTRY_FILE):
-        try:
-            with open(REGISTRY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"Error reading {REGISTRY_FILE}: {e}")
+    """Loads the researcher registry from the backend API."""
+    url = f"{BACKEND_URL}/api/researchers"
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"Error fetching researchers: {response.status_code}")
+    except Exception as e:
+        print(f"Exception fetching researchers: {e}")
             
-    # Default fallback list of researchers if registry file does not exist
-    return [
-        {"author_id": "57209617104", "name": "Somchai Rattanasiri", "department": "Department of Surgery", "status": "Active", "joinDate": None, "resignDate": None},
-        {"author_id": "57195977931", "name": "Tinnakorn Harnprasert", "department": "Department of Pediatrics", "status": "Active", "joinDate": None, "resignDate": None},
-        {"author_id": "57218392019", "name": "Prasert Srivilas", "department": "Department of Internal Medicine", "status": "Active", "joinDate": None, "resignDate": None},
-        {"author_id": "57222419080", "name": "Anan Wongsuwan", "department": "Department of Anesthesiology", "status": "Active", "joinDate": None, "resignDate": None},
-        {"author_id": "57205492100", "name": "Siriwan Klinpratoom", "department": "Department of Radiology", "status": "Active", "joinDate": None, "resignDate": None}
-    ]
+    # Default fallback list of researchers if API fails
+    return []
 
 def get_mock_data(researchers):
     """Generates mock publication data using the registered researchers."""
@@ -187,6 +186,9 @@ def get_journal_quartiles(issn, journal_name):
 
 def fetch_scopus_data_for_author(author_id, researcher_name, researcher_dept, status="Active", join_date=None, resign_date=None):
     """Fetches publications for a specific author ID from Scopus."""
+    if not author_id:
+        print(f"Skipping Scopus for {researcher_name} (No Author ID)")
+        return []
     print(f"Fetching publications for researcher: {researcher_name} (ID: {author_id}, Status: {status})...")
     url = "https://api.elsevier.com/content/search/scopus"
     headers = {
