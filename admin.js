@@ -280,6 +280,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (adminYearFilter) {
                 adminYearFilter.value = '5y';
             }
+            // Default researcher status filter to Active
+            if (adminResStatusFilter) {
+                adminResStatusFilter.value = 'Active';
+            }
             populateResearcherFilters();
             renderResearchers();
             renderPublications();
@@ -1020,7 +1024,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let filtered = researchers.filter(r => {
             const matchText = r.name.toLowerCase().includes(query) ||
-                r.author_id.includes(query) ||
+                (r.author_id || '').includes(query) ||
                 r.department.toLowerCase().includes(query);
 
             if (!matchText) return false;
