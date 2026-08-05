@@ -941,6 +941,8 @@ body {
     .modal-overlay,
     .toast-notification,
     .modal-close,
+    th:last-child,
+    td:last-child,
     #btn-global-save {
         display: none !important;
     }

@@ -245,6 +245,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             populateYearDropdown();
+            // Default year filter to 5 years (5y)
+            if (adminYearFilter) {
+                adminYearFilter.value = '5y';
+            }
             populateResearcherFilters();
             renderResearchers();
             renderPublications();
@@ -352,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!publicationSummaryContainer) return;
         const yearGroups = {};
         filteredPubs.forEach(pub => {
-            const y = pub.year || "Unknown";
+            const y = pub.year ? String(parseInt(pub.year, 10)) : "Unknown";
             if (!yearGroups[y]) {
                 yearGroups[y] = { count: 0, citations: 0 };
             }
@@ -642,6 +646,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Format authors list using et al. logic
             const formattedAuthors = formatAuthorsWithEtAl(pub.authors, pub.corresponding_author);
 
+            const cleanYear = pub.year ? String(parseInt(pub.year, 10)) : 'Unknown';
+            const scopusVal = pub.quartile_scopus || 'N/A';
+            const scimagoVal = pub.quartile_scimago || 'N/A';
+            const quartileText = `${scopusVal} (${cleanYear}) / ${scimagoVal} (${cleanYear})`;
+
             tr.innerHTML = `
                 <td>
                     <div style="font-weight:600; font-size:0.9rem; line-height:1.4;">${pub.title}</div>
@@ -654,23 +663,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </td>
                 <td style="font-size:0.85rem;">${pub.journal}</td>
-                <td style="text-align: center; font-weight:500;">${pub.year ? parseInt(pub.year, 10) : ''}</td>
+                <td style="text-align: center; font-weight:500;">${cleanYear}</td>
                 <td style="text-align: center;">
                     <span class="badge" style="background: rgba(124, 58, 237, 0.1); color: var(--accent-purple); font-weight:bold; padding:0.2rem 0.5rem; border-radius:6px;">
                         ${pub.citations}
                     </span>
                 </td>
-                <td style="text-align: center;">
-                    <div style="display: flex; flex-direction: column; gap: 0.2rem; align-items: center; position: relative;">
-                        <select class="admin-quartile-select" data-id="${pub.id}" data-idx="${originalIndex}" style="padding: 0.2rem; border-radius: 4px; border: 1px solid var(--border-color); font-size: 0.75rem; background: #fff;">
-                            <option value="Q1" ${pub.quartile === 'Q1' ? 'selected' : ''}>Q1</option>
-                            <option value="Q2" ${pub.quartile === 'Q2' ? 'selected' : ''}>Q2</option>
-                            <option value="Q3" ${pub.quartile === 'Q3' ? 'selected' : ''}>Q3</option>
-                            <option value="Q4" ${pub.quartile === 'Q4' ? 'selected' : ''}>Q4</option>
-                            <option value="N/A" ${!pub.quartile || pub.quartile === 'N/A' || pub.quartile === 'Unknown' ? 'selected' : ''}>N/A</option>
-                        </select>
-                        <span class="save-indicator" id="save-indicator-${pub.id}" style="font-size: 0.7rem; color: var(--accent-teal); display: none;"><i class="fa-solid fa-check"></i> Saved</span>
-                    </div>
+                <td style="text-align: center; font-size: 0.8rem; font-weight: 500;">
+                    ${quartileText}
                 </td>
                 <td style="text-align: center; white-space: nowrap;">
                     <button class="admin-action-btn btn-edit" data-idx="${originalIndex}"><i class="fa-solid fa-pen"></i> Edit</button>
@@ -681,42 +681,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Add event listeners
-        publicationTbody.querySelectorAll('.admin-quartile-select').forEach(sel => {
-            sel.addEventListener('change', async (e) => {
-                const pubId = sel.getAttribute('data-id');
-                const idx = sel.getAttribute('data-idx');
-                const newVal = sel.value;
-                const indicator = document.getElementById(`save-indicator-${pubId}`);
-                
-                sel.disabled = true;
-                indicator.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving';
-                indicator.style.color = 'var(--accent-blue)';
-                indicator.style.display = 'block';
-
-                try {
-                    const res = await fetch(`https://iram-backend.tinnakornh.workers.dev/api/publications/${pubId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ quartile: newVal })
-                    });
-                    if (!res.ok) throw new Error('API Error');
-                    
-                    publications[idx].quartile = newVal;
-                    publications[idx].quartile_scopus = newVal;
-                    publications[idx].quartile_scimago = newVal;
-                    
-                    indicator.innerHTML = '<i class="fa-solid fa-check"></i> Saved';
-                    indicator.style.color = 'var(--accent-teal)';
-                    setTimeout(() => { if(indicator) indicator.style.display = 'none'; }, 2000);
-                } catch(err) {
-                    indicator.innerHTML = '<i class="fa-solid fa-xmark"></i> Error';
-                    indicator.style.color = 'red';
-                } finally {
-                    sel.disabled = false;
-                }
-            });
-        });
-
         publicationTbody.querySelectorAll('.btn-edit').forEach(btn => {
             btn.addEventListener('click', () => {
                 const idx = parseInt(btn.getAttribute('data-idx'));
@@ -905,8 +869,38 @@ document.addEventListener('DOMContentLoaded', () => {
         record.departments = registeredDepts.length > 0 ? registeredDepts : ["Faculty of Medicine"];
 
         if (idx !== "") {
-            publications[parseInt(idx)] = record;
-            showToast("Article updated locally");
+            const originalPub = publications[parseInt(idx)];
+            const saveBtn = publicationForm.querySelector('button[type="submit"]');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            fetch(`https://iram-backend.tinnakornh.workers.dev/api/publications/${originalPub.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: record.title,
+                    journal: record.journal,
+                    year: record.year,
+                    citations: record.citations,
+                    doi: record.doi,
+                    quartile: record.quartile_scopus,
+                    quartile_scimago: record.quartile_scimago
+                })
+            }).then(res => {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Details';
+                if (res.ok) {
+                    publications[parseInt(idx)] = { ...originalPub, ...record };
+                    renderPublications();
+                    showToast("Article updated successfully in DB");
+                } else {
+                    showToast("Failed to update article in DB", "error");
+                }
+            }).catch(err => {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Details';
+                showToast("Failed to update article in DB", "error");
+            });
         } else {
             publications.push(record);
             showToast("Article added locally");
