@@ -126,7 +126,7 @@ def get_mock_data(researchers):
 SERIAL_CACHE = {}
 
 def get_journal_quartiles(issn, journal_name):
-    """Calculates Scopus and SCImago quartiles with Scopus API check and hashing fallback."""
+    """Calculates Scopus quartile via API and SCImago quartile via Reference DB."""
     # Check cache first
     if issn and issn in SERIAL_CACHE:
         return SERIAL_CACHE[issn]
@@ -134,7 +134,7 @@ def get_journal_quartiles(issn, journal_name):
     q_scopus = "N/A" # Fallback defaults
     q_scimago = "N/A"
 
-    # API check if key available
+    # API check if key available (Scopus CiteScore)
     if issn and API_KEY:
         url = "https://api.elsevier.com/content/serial/metadata"
         headers = {
@@ -142,7 +142,9 @@ def get_journal_quartiles(issn, journal_name):
             "Accept": "application/json"
         }
         try:
-            response = requests.get(url, headers=headers, params={"issn": issn}, timeout=5)
+            # Strip hyphens just in case for consistent comparison
+            clean_issn = issn.replace("-", "")
+            response = requests.get(url, headers=headers, params={"issn": clean_issn}, timeout=5)
             if response.status_code == 200:
                 data = response.json()
                 entries = data.get("serial-metadata-response", {}).get("entry", [])
@@ -158,6 +160,19 @@ def get_journal_quartiles(issn, journal_name):
                             else: q_scopus = "Q4"
         except Exception:
             pass
+
+    # Check SJR Quartile from Reference DB (Cloudflare D1)
+    if issn:
+        try:
+            clean_issn = issn.replace("-", "")
+            ref_url = f"https://iram-backend.tinnakornh.workers.dev/api/reference/quartile/{clean_issn}"
+            resp = requests.get(ref_url, timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("source") == "SJR" and data.get("quartile"):
+                    q_scimago = data.get("quartile")
+        except Exception as e:
+            print(f"Warning: Failed to fetch SJR from Reference DB for ISSN {issn}: {e}")
 
     # Specific override rules for Q1 journals
     j_lower = journal_name.lower()
