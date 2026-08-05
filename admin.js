@@ -216,14 +216,43 @@ document.addEventListener('DOMContentLoaded', () => {
             // Load data.json for publications
             const dataResp = await fetch('https://iram-backend.tinnakornh.workers.dev/api/publications');
             if (dataResp.ok) {
-                const db = await dataResp.json();
-                publications = db || [];
+                const rawPubs = await dataResp.json() || [];
+                publications = rawPubs.map(pub => {
+                    let parsedAuthors = [];
+                    let corrAuthorStr = null;
+                    if (pub.authors) {
+                        try {
+                            const authorsObjArray = typeof pub.authors === 'string' ? JSON.parse(pub.authors) : pub.authors;
+                            if (Array.isArray(authorsObjArray)) {
+                                parsedAuthors = authorsObjArray.map(a => typeof a === 'string' ? a : (a.name || ''));
+                                const corr = authorsObjArray.find(a => typeof a === 'object' && (a.isCorresponding === 1 || a.isCorresponding === true));
+                                if (corr) corrAuthorStr = corr.name;
+                            }
+                        } catch (e) {
+                            console.warn('Failed to parse authors for pub', pub.id);
+                        }
+                    }
+                    
+                    let parsedDbs = ['Scopus'];
+                    if (pub.sourceDatabases) {
+                        try {
+                            parsedDbs = typeof pub.sourceDatabases === 'string' ? JSON.parse(pub.sourceDatabases) : pub.sourceDatabases;
+                        } catch(e) {}
+                    }
+                    
+                    return {
+                        ...pub,
+                        authors: parsedAuthors,
+                        corresponding_author: corrAuthorStr || pub.corresponding_author || null,
+                        databases: parsedDbs
+                    };
+                });
                 dbMetadata = {
-                    status: db.status || "success",
-                    data_source: db.data_source || "manual",
+                    status: "success",
+                    data_source: "manual",
                     retrieved_at: new Date().toLocaleString(),
-                    affiliation: db.affiliation || "Faculty of Medicine, Naresuan University",
-                    researchers: db.researchers || []
+                    affiliation: "Faculty of Medicine, Naresuan University",
+                    researchers: []
                 };
             }
             
@@ -649,7 +678,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const cleanYear = pub.year ? String(parseInt(pub.year, 10)) : 'Unknown';
             const scopusVal = pub.quartile_scopus || 'N/A';
             const scimagoVal = pub.quartile_scimago || 'N/A';
-            const quartileText = `${scopusVal} (${cleanYear}) / ${scimagoVal} (${cleanYear})`;
+            
+            const scopusDisplay = (scopusVal === 'N/A' || !scopusVal) ? 'N/A' : `${scopusVal} (${cleanYear})`;
+            const scimagoDisplay = (scimagoVal === 'N/A' || !scimagoVal) ? 'N/A' : `${scimagoVal} (${cleanYear})`;
+            const quartileText = `${scopusDisplay} / ${scimagoDisplay}`;
 
             tr.innerHTML = `
                 <td>
