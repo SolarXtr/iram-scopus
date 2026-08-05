@@ -1160,8 +1160,19 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Compile author stats (Registered only)
         const activeResearchers = database.researchers.filter(r => r.status === "Active" || !r.status);
-        const registeredNames = new Set(activeResearchers.map(r => r.name.trim().toLowerCase()));
         const authorStats = {};
+        
+        // Initialize all active researchers
+        activeResearchers.forEach(r => {
+            authorStats[r.name.trim()] = {
+                name: r.name.trim(),
+                pubs: 0,
+                citations: 0,
+                citationsList: [],
+                journals: new Set(),
+                department: r.department || "Faculty of Medicine"
+            };
+        });
         
         filteredResults.forEach(pub => {
             if (!pub.authorsRaw) return;
@@ -1169,27 +1180,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (typeof rawAuth !== 'object' || !rawAuth.name) return;
                 const cleanedAuth = rawAuth.name.trim();
                 
-                if (registeredNames.has(cleanedAuth.toLowerCase())) {
-                    const regInfo = database.researchers.find(r => r.name.trim().toLowerCase() === cleanedAuth.toLowerCase());
-                    const deptName = regInfo ? regInfo.department : (pub.departments ? pub.departments[0] : "Faculty of Medicine");
-                    
-                    if (!authorStats[cleanedAuth]) {
-                        authorStats[cleanedAuth] = {
-                            name: cleanedAuth,
-                            pubs: 0,
-                            citations: 0,
-                            citationsList: [],
-                            journals: new Set(),
-                            department: deptName
-                        };
-                    }
-                    
+                // Find matching researcher case-insensitively
+                const matchedKey = Object.keys(authorStats).find(k => k.toLowerCase() === cleanedAuth.toLowerCase());
+                if (matchedKey) {
                     // Only count towards their KPIs if they were affiliated at the time of publication
                     if (rawAuth.isNuAffiliated === 1 || rawAuth.isNuAffiliated === true) {
-                        authorStats[cleanedAuth].pubs++;
-                        authorStats[cleanedAuth].citations += (pub.citations || 0);
-                        authorStats[cleanedAuth].citationsList.push(pub.citations || 0);
-                        authorStats[cleanedAuth].journals.add(pub.journal);
+                        authorStats[matchedKey].pubs++;
+                        authorStats[matchedKey].citations += (pub.citations || 0);
+                        authorStats[matchedKey].citationsList.push(pub.citations || 0);
+                        authorStats[matchedKey].journals.add(pub.journal);
                     }
                 }
             });
