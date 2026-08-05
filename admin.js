@@ -242,6 +242,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     return {
                         ...pub,
+                        quartile_scopus: pub.quartile || '',
+                        quartile_scimago: pub.quartile_scimago || '',
                         authors: parsedAuthors,
                         corresponding_author: corrAuthorStr || pub.corresponding_author || null,
                         databases: parsedDbs
@@ -934,8 +936,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast("Failed to update article in DB", "error");
             });
         } else {
-            publications.push(record);
-            showToast("Article added locally");
+            // Adding a new publication
+            const saveBtn = publicationForm.querySelector('button[type="submit"]');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+            
+            // Format authors list for import API
+            const authorsPayload = record.authors.map((name, index) => {
+                // Determine if this author is a registered NU researcher
+                const matched = researchers.find(r => r.name.toLowerCase() === name.toLowerCase());
+                return {
+                    name: name,
+                    order: index + 1,
+                    isCorresponding: record.corresponding_author ? record.corresponding_author.toLowerCase() === name.toLowerCase() : false,
+                    isNuAffiliated: matched ? 1 : 0
+                };
+            });
+            
+            fetch(`https://iram-backend.tinnakornh.workers.dev/api/publications/import`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    doi: record.doi,
+                    title: record.title,
+                    journal: record.journal,
+                    year: parseInt(record.year, 10) || 0,
+                    coverDate: record.coverDate,
+                    citations: record.citations,
+                    quartile: record.quartile_scopus,
+                    quartile_scimago: record.quartile_scimago,
+                    status: record.status || "PUBLISHED",
+                    authors: authorsPayload,
+                    databases: record.databases
+                })
+            }).then(res => res.json()).then(resData => {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Details';
+                if (resData.id) {
+                    record.id = resData.id;
+                    publications.push(record);
+                    renderPublications();
+                    showToast("Article added successfully in DB");
+                } else {
+                    showToast("Failed to add article in DB: " + (resData.error || "Unknown"), "error");
+                }
+            }).catch(err => {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Details';
+                showToast("Failed to add article in DB", "error");
+            });
         }
         publicationModal.classList.remove('active');
         renderPublications();
