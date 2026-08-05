@@ -608,11 +608,7 @@ def main():
     final_results = list(unique_docs.values())
     
     # 4. Push results to API
-    if len(final_results) > 0 and scopus_success:
-        data_to_push = final_results
-    else:
-        # Fallback to Sandbox mock data mapped to registry
-        data_to_push = get_mock_data(researchers)["results"]
+    data_to_push = final_results
         
     api_url = "https://iram-backend.tinnakornh.workers.dev/api/publications/import"
     success_count = 0
