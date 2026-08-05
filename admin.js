@@ -680,10 +680,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const cleanYear = pub.year ? String(parseInt(pub.year, 10)) : 'Unknown';
             const scopusVal = pub.quartile_scopus || 'N/A';
             const scimagoVal = pub.quartile_scimago || 'N/A';
-            
-            const scopusDisplay = (scopusVal === 'N/A' || !scopusVal) ? 'N/A' : `${scopusVal} (${cleanYear})`;
-            const scimagoDisplay = (scimagoVal === 'N/A' || !scimagoVal) ? 'N/A' : `${scimagoVal} (${cleanYear})`;
-            const quartileText = `${scopusDisplay} / ${scimagoDisplay}`;
+            const quartileText = `${scopusVal} / ${scimagoVal}`;
 
             tr.innerHTML = `
                 <td>
