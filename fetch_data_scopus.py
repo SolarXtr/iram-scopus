@@ -4,6 +4,10 @@ import requests
 import datetime
 import random
 import time
+import sys
+
+# Ensure UTF-8 output on Windows console
+sys.stdout.reconfigure(encoding='utf-8')
 
 # Configuration
 API_KEY = "68e2bfd85d173bb9c601817d969e11e5"
