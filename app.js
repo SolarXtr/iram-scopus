@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     year: pub.year ? String(parseInt(pub.year, 10)) : 'Unknown Year',
                     coverDate: pub.coverDate || '',
                     quartile_scopus: pub.quartile || '',
-                    quartile_scimago: pub.quartile || '',
+                    quartile_scimago: pub.quartile_scimago || '',
                     status: pub.status || '',
                     authors: parsedAuthors,
                     authorsRaw: authorsRaw,
