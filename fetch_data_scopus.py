@@ -459,6 +459,73 @@ def fetch_pubmed_data_for_author(researcher_name, researcher_dept, status="Activ
         
     return pubmed_results
 
+def fetch_orcid_wos_data_for_author(orcid_id, researcher_name, researcher_dept, status):
+    """Fetches Web of Science publications via ORCID."""
+    if not orcid_id:
+        print(f"Skipping ORCID (WoS) for {researcher_name} (No ORCID)")
+        return []
+        
+    print(f"Fetching WoS publications for researcher: {researcher_name} (ORCID: {orcid_id})...")
+    url = f"https://pub.orcid.org/v3.0/{orcid_id}/works"
+    headers = {"Accept": "application/json", "User-Agent": "Mozilla/5.0"}
+    
+    wos_pubs = []
+    try:
+        response = requests.get(url, headers=headers, timeout=15)
+        if response.status_code != 200:
+            return []
+            
+        data = response.json()
+        works = data.get("group", [])
+        
+        for group in works:
+            work_summaries = group.get("work-summary", [])
+            for summary in work_summaries:
+                source_name = summary.get("source", {}).get("source-name", {}).get("value", "")
+                if source_name and any(x in source_name for x in ["ResearcherID", "Web of Science", "Publons"]):
+                    title = summary.get("title", {}).get("title", {}).get("value", "")
+                    
+                    year = None
+                    pub_date = summary.get("publication-date")
+                    if pub_date and pub_date.get("year"):
+                        year = pub_date.get("year").get("value")
+                        
+                    doi = ""
+                    ext_ids = summary.get("external-ids", {}).get("external-id", [])
+                    for ext_id in ext_ids:
+                        if ext_id.get("external-id-type") == "doi":
+                            doi = ext_id.get("external-id-value", "")
+                            break
+                            
+                    journal = summary.get("journal-title", {}).get("value", "") if summary.get("journal-title") else ""
+                    
+                    # Fetch Quartiles
+                    q_scopus, q_scimago = get_journal_quartiles("", journal)
+                    
+                    wos_pubs.append({
+                        "title": title,
+                        "creator": researcher_name,
+                        "creator_is_nu_affiliated": True,
+                        "authors": [researcher_name],
+                        "corresponding_author": researcher_name,
+                        "departments": [researcher_dept],
+                        "journal": journal,
+                        "coverDate": f"{year}-01-01" if year else "",
+                        "year": str(year) if year else "",
+                        "citations": 0,
+                        "citations_scopus": 0,
+                        "citations_pubmed": 0,
+                        "doi": doi,
+                        "quartile_scopus": q_scopus,
+                        "quartile_scimago": q_scimago,
+                        "databases": ["WoS"]
+                    })
+                    break
+    except Exception as e:
+        print(f"  Error fetching ORCID data for {researcher_name}: {e}")
+        
+    return wos_pubs
+
 def main():
     # 1. Load registry list
     researchers = load_researchers()
@@ -480,9 +547,14 @@ def main():
                 scopus_success = False
                 
         # B. Fetch from PubMed
-        pubmed_pubs = fetch_pubmed_data_for_author(res["name"], res["department"], status, researchers)
+        pubmed_pubs = fetch_pubmed_data_for_author(res["name"], res.get("department"), status, researchers)
         if len(pubmed_pubs) > 0:
             all_results.extend(pubmed_pubs)
+            
+        # C. Fetch from ORCID (WoS)
+        wos_pubs = fetch_orcid_wos_data_for_author(res.get("orcid"), res["name"], res.get("department"), status)
+        if len(wos_pubs) > 0:
+            all_results.extend(wos_pubs)
             
         # Rate-limiting delay to prevent API blocks
         time.sleep(0.3)
