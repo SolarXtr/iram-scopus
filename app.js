@@ -257,8 +257,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (!matched && rawAuth.name) {
                             matched = findResearcher(rawAuth.name, researchersData);
                         }
+                        
+                        const isAff = (rawAuth.isNuAffiliated === 1 || rawAuth.isNuAffiliated === true);
                         if (matched) {
                             nuResNames.push(matched.name);
+                        } else if (isAff && rawAuth.name) {
+                            nuResNames.push(rawAuth.name);
                         }
                     });
                 }
@@ -1151,10 +1155,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!matchedRes) {
                         matchedRes = findResearcher(rawAuth.name, activeResList);
                     }
+                    
+                    const isAff = (rawAuth.isNuAffiliated === 1 || rawAuth.isNuAffiliated === true);
                     if (matchedRes) {
                         const displayName = matchedRes.name;
                         const formattedDisplay = formatAuthorName(displayName);
                         nuResearchers.push(`<span class="researcher-tag-item" style="font-weight: 500; font-size: 0.85rem; color: var(--text-primary);">${formattedDisplay}<sup>${index + 1}</sup></span>`);
+                    } else if (isAff) {
+                        const formattedDisplay = formatAuthorName(rawAuth.name);
+                        nuResearchers.push(`<span class="researcher-tag-item" style="font-weight: 500; font-size: 0.85rem; color: var(--text-primary); opacity: 0.85;" title="Affiliated NU researcher (not in registry)">${formattedDisplay}<sup>${index + 1}</sup></span>`);
                     }
                 });
             } else {
