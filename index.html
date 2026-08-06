@@ -331,6 +331,11 @@
                 <div class="modal-profile-info">
                     <h3 id="modal-author-name">Researcher Name</h3>
                     <p id="modal-author-dept">Department</p>
+                    <div id="modal-member-edit-btn-container" style="display: none; margin-top: 0.5rem;">
+                        <button id="btn-modal-edit-profile" class="btn" style="background: rgba(37,99,235,0.1); color: var(--accent-blue); border: 1px solid rgba(37,99,235,0.2); padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;">
+                            <i class="fa-solid fa-user-pen"></i> Edit Profile
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="modal-stats">
@@ -351,6 +356,36 @@
                     <span class="stat-value" id="modal-stat-avg" style="color: var(--accent-teal);">0.0</span>
                 </div>
             </div>
+
+            <!-- Edit Profile Form -->
+            <div id="modal-edit-profile-form" style="display: none; background: rgba(0,0,0,0.02); border: 1px solid var(--border-color); padding: 1rem; border-radius: 12px; margin-top: 1rem; text-align: left;">
+                <h4 style="margin-top: 0; margin-bottom: 0.8rem; font-family: var(--font-heading); font-size: 0.9rem; font-weight: 600; color: var(--text-primary);"><i class="fa-solid fa-user-pen"></i> Edit Personal Profile</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">ORCID iD</label>
+                        <input type="text" id="edit-res-orcid" style="width: 100%; padding: 0.4rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.8rem;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Scopus Author ID</label>
+                        <input type="text" id="edit-res-scopus" style="width: 100%; padding: 0.4rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.8rem;" readonly disabled title="Scopus ID can only be changed by Admin">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Join Date</label>
+                        <input type="date" id="edit-res-join-date" style="width: 100%; padding: 0.4rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.8rem;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Resign Date</label>
+                        <input type="date" id="edit-res-resign-date" style="width: 100%; padding: 0.4rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.8rem;">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button id="btn-save-profile-edit" class="btn" style="background: var(--accent-blue); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">Save</button>
+                    <button id="btn-cancel-profile-edit" class="btn" style="background: #e2e8f0; color: var(--text-secondary); border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">Cancel</button>
+                </div>
+            </div>
+
             <div class="modal-publications">
                 <h4>Publications List</h4>
                 <div class="modal-pub-list" id="modal-pub-list">

@@ -1,4 +1,29 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Check Authentication
+    const userStr = localStorage.getItem('iram_user');
+    let currentUser = null;
+    if (userStr) {
+        currentUser = JSON.parse(userStr);
+    }
+    
+    if (!currentUser || currentUser.role !== 'ADMIN') {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    // Override fetch to include auth headers
+    const originalFetch = window.fetch;
+    window.fetch = function(url, options = {}) {
+        if (!options.headers) {
+            options.headers = {};
+        }
+        if (currentUser) {
+            options.headers['X-User-Role'] = currentUser.role;
+            options.headers['X-User-Id'] = currentUser.id;
+        }
+        return originalFetch(url, options);
+    };
+
     // State arrays
     let researchers = [];
     let publications = [];
@@ -14,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const navResearchers = document.getElementById('nav-manage-researchers');
     const navPublications = document.getElementById('nav-manage-publications');
     const navAnalytics = document.getElementById('nav-manage-analytics');
+    const btnLogout = document.getElementById('btn-logout');
     
     const secResearchers = document.getElementById('manage-researchers-section');
     const secPublications = document.getElementById('manage-publications-section');
@@ -1372,5 +1398,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- INITIAL DATA LOAD ---
     loadData();
+
+    if (btnLogout) {
+        btnLogout.addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('iram_user');
+            window.location.href = 'login.html';
+        });
+    }
 });
 

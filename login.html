@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iRAM - Simulated Login</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            margin: 0;
+            background-color: var(--bg-primary);
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 3rem 2.5rem;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: var(--shadow-soft);
+            z-index: 10;
+            text-align: center;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-header h1 {
+            font-family: var(--font-heading);
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            text-align: left;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .select-input, .text-input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.8);
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .select-input:focus, .text-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 4px var(--accent-blue-glow);
+            background: #fff;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 0.9rem;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: #fff;
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2);
+            margin-top: 1rem;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .btn-login:disabled {
+            background: var(--text-muted);
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            margin-bottom: 1.5rem;
+            display: none;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <!-- Soft Decorative Blobs -->
+    <div class="glass-bg-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="login-card">
+        <div class="login-header">
+            <h1>iRAM Portal</h1>
+            <p>Select a simulated role to explore Naresuan Med access levels.</p>
+        </div>
+
+        <div class="alert-error" id="login-error"></div>
+
+        <form id="login-form">
+            <div class="form-group">
+                <label for="role-select">Simulated Role Selection</label>
+                <select id="role-select" class="select-input">
+                    <option value="admin">Admin (Full Control - admin@nu.ac.th)</option>
+                    <option value="member">Researcher / Member (Self Profile Control)</option>
+                    <option value="guest">General User (Guest View Only)</option>
+                </select>
+            </div>
+
+            <!-- Email container, dynamically shown or modified -->
+            <div class="form-group" id="email-group" style="display: none;">
+                <label for="researcher-select">Select Registered Researcher</label>
+                <select id="researcher-select" class="select-input">
+                    <option value="">-- Choose a Researcher --</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="manual-email-group">
+                <label for="email-input">NU Email Address</label>
+                <input type="text" id="email-input" class="text-input" value="admin@nu.ac.th" placeholder="username@nu.ac.th">
+            </div>
+
+            <button type="submit" id="btn-submit" class="btn-login">Sign In (Simulated)</button>
+        </form>
+    </div>
+
+    <script>
+        const roleSelect = document.getElementById('role-select');
+        const emailInput = document.getElementById('email-input');
+        const emailGroup = document.getElementById('email-group');
+        const manualEmailGroup = document.getElementById('manual-email-group');
+        const researcherSelect = document.getElementById('researcher-select');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const btnSubmit = document.getElementById('btn-submit');
+
+        let researchers = [];
+
+        // Fetch researchers list to populate member dropdown
+        async function fetchResearchers() {
+            try {
+                const res = await fetch('https://iram-backend.tinnakornh.workers.dev/api/researchers');
+                if (res.ok) {
+                    researchers = await res.json();
+                    researchers.forEach(r => {
+                        const opt = document.createElement('option');
+                        opt.value = r.email || `${r.name.replace(/\s+/g, '.').toLowerCase()}@nu.ac.th`;
+                        opt.textContent = `${r.name} (${r.department || 'Medicine'})`;
+                        researcherSelect.appendChild(opt);
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to load researchers:", err);
+            }
+        }
+
+        fetchResearchers();
+
+        // Handle role dropdown change
+        roleSelect.addEventListener('change', () => {
+            const val = roleSelect.value;
+            loginError.style.display = 'none';
+            if (val === 'admin') {
+                emailGroup.style.display = 'none';
+                manualEmailGroup.style.display = 'block';
+                emailInput.value = 'admin@nu.ac.th';
+                emailInput.readOnly = true;
+            } else if (val === 'member') {
+                emailGroup.style.display = 'block';
+                manualEmailGroup.style.display = 'none';
+                emailInput.value = '';
+            } else {
+                emailGroup.style.display = 'none';
+                manualEmailGroup.style.display = 'block';
+                emailInput.value = 'guest@nu.ac.th';
+                emailInput.readOnly = false;
+            }
+        });
+
+        // Form submission
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            loginError.style.display = 'none';
+            btnSubmit.disabled = true;
+            btnSubmit.textContent = 'Authenticating...';
+
+            let email = emailInput.value.trim();
+            if (roleSelect.value === 'member') {
+                email = researcherSelect.value;
+                if (!email) {
+                    loginError.textContent = 'Please choose a researcher profile to simulate.';
+                    loginError.style.display = 'block';
+                    btnSubmit.disabled = false;
+                    btnSubmit.textContent = 'Sign In (Simulated)';
+                    return;
+                }
+            }
+
+            try {
+                const res = await fetch('https://iram-backend.tinnakornh.workers.dev/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                if (!res.ok) throw new Error('Authentication failed');
+
+                const data = await res.json();
+                if (data.user) {
+                    localStorage.setItem('iram_user', JSON.stringify(data.user));
+                    
+                    // Redirect based on role
+                    if (data.user.role === 'ADMIN') {
+                        window.location.href = 'admin.html';
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                } else {
+                    throw new Error('Invalid user payload');
+                }
+            } catch (err) {
+                loginError.textContent = err.message || 'Connection error. Please try again.';
+                loginError.style.display = 'block';
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = 'Sign In (Simulated)';
+            }
+        });
+    </script>
+</body>
+</html>

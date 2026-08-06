@@ -1,4 +1,64 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Session variables
+    const userStr = localStorage.getItem('iram_user');
+    let currentUser = null;
+    if (userStr) {
+        currentUser = JSON.parse(userStr);
+    }
+
+    // Override fetch to include headers
+    const originalFetch = window.fetch;
+    window.fetch = function(url, options = {}) {
+        if (!options.headers) {
+            options.headers = {};
+        }
+        if (currentUser) {
+            options.headers['X-User-Role'] = currentUser.role;
+            options.headers['X-User-Id'] = currentUser.id;
+        }
+        return originalFetch(url, options);
+    };
+
+    // Render session UI elements
+    const sessionUserInfo = document.getElementById('session-user-info');
+    const sessionUsername = document.getElementById('session-username');
+    const sessionRole = document.getElementById('session-role');
+    const btnLoginRedirect = document.getElementById('btn-login-redirect');
+    const btnLogout = document.getElementById('btn-logout');
+    const navAdminPortal = document.getElementById('nav-admin-portal');
+
+    if (currentUser) {
+        if (sessionUserInfo) sessionUserInfo.style.display = 'block';
+        if (sessionUsername) sessionUsername.textContent = currentUser.name;
+        if (sessionRole) sessionRole.textContent = currentUser.role;
+        if (btnLoginRedirect) btnLoginRedirect.style.display = 'none';
+        if (btnLogout) btnLogout.style.display = 'flex';
+        
+        // Show Admin Portal link if admin
+        if (currentUser.role === 'ADMIN' && navAdminPortal) {
+            navAdminPortal.style.display = 'flex';
+        }
+    } else {
+        if (sessionUserInfo) sessionUserInfo.style.display = 'none';
+        if (btnLoginRedirect) btnLoginRedirect.style.display = 'flex';
+        if (btnLogout) btnLogout.style.display = 'none';
+        if (navAdminPortal) navAdminPortal.style.display = 'none';
+    }
+
+    if (btnLoginRedirect) {
+        btnLoginRedirect.addEventListener('click', () => {
+            window.location.href = 'login.html';
+        });
+    }
+
+    if (btnLogout) {
+        btnLogout.addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('iram_user');
+            window.location.reload();
+        });
+    }
+
     // Application State
     let database = null;
     let filteredResults = [];
@@ -1363,6 +1423,83 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 modalPubList.appendChild(item);
             });
+        }
+
+        // Show edit controls if Admin or Member self-accessing
+        const matchedRes = database.researchers.find(r => r.name.toLowerCase() === authorName.toLowerCase());
+        const editBtnContainer = document.getElementById('modal-member-edit-btn-container');
+        const editForm = document.getElementById('modal-edit-profile-form');
+        
+        if (editBtnContainer) editBtnContainer.style.display = 'none';
+        if (editForm) editForm.style.display = 'none';
+
+        if (matchedRes && currentUser) {
+            const isAdmin = currentUser.role === 'ADMIN';
+            const isSelf = currentUser.role === 'MEMBER' && currentUser.id === matchedRes.id;
+            
+            if (isAdmin || isSelf) {
+                if (editBtnContainer) editBtnContainer.style.display = 'block';
+                
+                document.getElementById('edit-res-orcid').value = matchedRes.orcid || '';
+                document.getElementById('edit-res-scopus').value = matchedRes.author_id || '';
+                document.getElementById('edit-res-join-date').value = matchedRes.joinDate || '';
+                document.getElementById('edit-res-resign-date').value = matchedRes.resignDate || '';
+
+                const btnEditProfile = document.getElementById('btn-modal-edit-profile');
+                if (btnEditProfile) {
+                    btnEditProfile.onclick = (e) => {
+                        e.preventDefault();
+                        editForm.style.display = editForm.style.display === 'none' ? 'block' : 'none';
+                    };
+                }
+
+                const btnSaveProfile = document.getElementById('btn-save-profile-edit');
+                if (btnSaveProfile) {
+                    btnSaveProfile.onclick = async (e) => {
+                        e.preventDefault();
+                        btnSaveProfile.disabled = true;
+                        btnSaveProfile.textContent = 'Saving...';
+                        
+                        const payload = {
+                            orcid: document.getElementById('edit-res-orcid').value.trim(),
+                            joinDate: document.getElementById('edit-res-join-date').value || null,
+                            resignDate: document.getElementById('edit-res-resign-date').value || null
+                        };
+
+                        try {
+                            const res = await fetch(`https://iram-backend.tinnakornh.workers.dev/api/researchers/${matchedRes.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                            if (!res.ok) throw new Error('Save failed');
+
+                            matchedRes.orcid = payload.orcid;
+                            matchedRes.joinDate = payload.joinDate;
+                            matchedRes.resignDate = payload.resignDate;
+
+                            alert('Profile updated successfully!');
+                            editForm.style.display = 'none';
+                            
+                            // Re-fetch data or update UI
+                            loadData();
+                        } catch (err) {
+                            alert('Failed to save profile changes: ' + err.message);
+                        } finally {
+                            btnSaveProfile.disabled = false;
+                            btnSaveProfile.textContent = 'Save';
+                        }
+                    };
+                }
+
+                const btnCancelProfile = document.getElementById('btn-cancel-profile-edit');
+                if (btnCancelProfile) {
+                    btnCancelProfile.onclick = (e) => {
+                        e.preventDefault();
+                        editForm.style.display = 'none';
+                    };
+                }
+            }
         }
 
         // Show Modal
