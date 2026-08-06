@@ -1145,6 +1145,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const qDisplay = !isNaN(evalYear) ? `${qValDisplay} (${evalYear})` : qValDisplay;
             const tooltipText = `Scopus: ${qScopus} | SCImago: ${qScimago}`;
 
+            const editButtonHtml = (currentUser && (currentUser.role === 'ADMIN' || (currentUser.role === 'MEMBER' && pub.authorsRaw && pub.authorsRaw.some(a => a.userId === currentUser.id)))) ? `
+                <a href="#" class="btn-edit-pub" data-id="${pub.id}" style="margin-left: 0.8rem; font-size: 0.72rem; color: var(--accent-blue); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.2rem; cursor: pointer; background: var(--accent-blue-glow); padding: 0.15rem 0.4rem; border-radius: 4px; border: 1px solid rgba(37,99,235,0.15);">
+                    <i class="fa-solid fa-pen" style="font-size: 0.65rem;"></i> Edit
+                </a>
+            ` : '';
+
             tr.innerHTML = `
                 <td>
                     <div style="display: flex; flex-direction: column; gap: 0.4rem;">
@@ -1159,6 +1165,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="db-badges">
                                 ${dbBadgesHtml}
                             </div>
+                            ${editButtonHtml}
                         </div>
                     </div>
                 </td>
@@ -1185,6 +1192,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 </td>
             `;
             publicationsTbody.appendChild(tr);
+        });
+
+        // Bind Edit buttons
+        publicationsTbody.querySelectorAll('.btn-edit-pub').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const pubId = btn.getAttribute('data-id');
+                openPubEditModal(pubId);
+            });
         });
     }
 
@@ -1569,6 +1585,87 @@ document.addEventListener('DOMContentLoaded', () => {
     if (thYear) thYear.addEventListener('click', () => handleHeaderClick('year'));
     if (thCitations) thCitations.addEventListener('click', () => handleHeaderClick('citations'));
     if (thQuartile) thQuartile.addEventListener('click', () => handleHeaderClick('quartile'));
+
+    // --- ARTICLE EDIT MODAL & ACTIONS ---
+    const pubEditModal = document.getElementById('pub-edit-modal');
+    const pubEditForm = document.getElementById('pub-edit-form');
+    
+    function openPubEditModal(pubId) {
+        const pub = database.results.find(p => p.id === pubId);
+        if (!pub) return;
+
+        document.getElementById('edit-pub-id').value = pub.id;
+        document.getElementById('edit-pub-title-label').textContent = pub.title;
+        document.getElementById('edit-pub-journal-label').textContent = `${pub.journal} (${pub.year})`;
+        
+        document.getElementById('edit-pub-doi').value = pub.doi || '';
+        document.getElementById('edit-pub-citations').value = pub.citations || 0;
+        
+        document.getElementById('edit-pub-q-scopus').value = pub.quartile_scopus || 'N/A';
+        document.getElementById('edit-pub-q-scimago').value = pub.quartile_scimago || 'N/A';
+
+        pubEditModal.classList.add('active');
+    }
+
+    const pubEditCloseBtn = document.getElementById('pub-edit-close-btn');
+    if (pubEditCloseBtn) {
+        pubEditCloseBtn.addEventListener('click', () => pubEditModal.classList.remove('active'));
+    }
+    const btnPubEditCancel = document.getElementById('btn-pub-edit-cancel');
+    if (btnPubEditCancel) {
+        btnPubEditCancel.addEventListener('click', () => pubEditModal.classList.remove('active'));
+    }
+
+    if (pubEditForm) {
+        pubEditForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pubId = document.getElementById('edit-pub-id').value;
+            const submitBtn = pubEditForm.querySelector('button[type="submit"]');
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+
+            const payload = {
+                doi: document.getElementById('edit-pub-doi').value.trim() || null,
+                citations: parseInt(document.getElementById('edit-pub-citations').value, 10) || 0,
+                quartile: document.getElementById('edit-pub-q-scopus').value || 'N/A',
+                quartile_scimago: document.getElementById('edit-pub-q-scimago').value || 'N/A'
+            };
+
+            try {
+                const res = await fetch(`https://iram-backend.tinnakornh.workers.dev/api/publications/${pubId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.error || 'Failed to update publication');
+                }
+
+                // Update locally in state
+                const pub = database.results.find(p => p.id === pubId);
+                if (pub) {
+                    pub.doi = payload.doi;
+                    pub.citations = payload.citations;
+                    pub.quartile_scopus = payload.quartile;
+                    pub.quartile_scimago = payload.quartile_scimago;
+                }
+
+                alert('Publication details updated successfully!');
+                pubEditModal.classList.remove('active');
+                
+                // Re-render
+                applyFilter();
+            } catch (err) {
+                alert('Error saving publication: ' + err.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Save Changes';
+            }
+        });
+    }
 
     // --- INITIAL BOOTSTRAP ---
     loadData();
