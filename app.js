@@ -163,6 +163,45 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- DATA LOADING & INITIALIZATION ---
+    function findResearcher(authorName, researchers) {
+        if (!authorName) return null;
+        const clean = authorName.toLowerCase()
+            .replace(/,/g, ' ')
+            .replace(/\./g, ' ')
+            .replace(/[^a-z\s-]/g, '')
+            .trim();
+        const authTokens = clean.split(/\s+/).filter(t => t.length > 0);
+        if (authTokens.length === 0) return null;
+        
+        const authSurnames = authTokens.filter(t => t.length > 2);
+        const authInits = authTokens.filter(t => t.length <= 2).map(t => t[0]);
+        
+        let bestMatch = null;
+        for (let r of researchers) {
+            const rClean = r.name.toLowerCase().replace(/[^a-z\s-]/g, '').trim();
+            const rTokens = rClean.split(/\s+/).filter(t => t.length > 0);
+            if (rTokens.length < 2) continue;
+            
+            const rFirst = rTokens[0];
+            const rLast = rTokens[rTokens.length - 1];
+            
+            if (!authSurnames.includes(rLast)) continue;
+            
+            if (authInits.length > 0) {
+                if (authInits.includes(rFirst[0])) {
+                    return r;
+                }
+                continue;
+            }
+            
+            if (authSurnames.includes(rFirst)) {
+                return r;
+            }
+            if (!bestMatch) bestMatch = r;
+        }
+        return bestMatch;
+    }
+
     async function loadData() {
         try {
             retrievedTimeEl.textContent = 'Loading dataset...';
@@ -206,6 +245,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         parsedDbs = typeof pub.sourceDatabases === 'string' ? JSON.parse(pub.sourceDatabases) : pub.sourceDatabases;
                     } catch(e) {}
                 }
+
+                // Compute nuResearchersStr for sorting alphabetically
+                let nuResNames = [];
+                if (authorsRaw && authorsRaw.length > 0) {
+                    authorsRaw.forEach(rawAuth => {
+                        let matched = null;
+                        if (rawAuth.userId) {
+                            matched = researchersData.find(r => r.id === rawAuth.userId);
+                        }
+                        if (!matched && rawAuth.name) {
+                            matched = findResearcher(rawAuth.name, researchersData);
+                        }
+                        if (matched) {
+                            nuResNames.push(matched.name);
+                        }
+                    });
+                }
+                const nuResearchersStr = nuResNames.join(', ');
                 
                 return {
                     id: pub.id,
@@ -224,7 +281,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     citations: pub.citations || 0,
                     corresponding_author: corrAuthorStr || pub.corresponding_author || null,
                     databases: parsedDbs,
-                    departments: pub.departments || []
+                    departments: pub.departments || [],
+                    nuResearchersStr: nuResearchersStr
                 };
             });
 
@@ -824,8 +882,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 valA = a.title.toLowerCase();
                 valB = b.title.toLowerCase();
             } else if (sortField === 'author') {
-                valA = a.creator.toLowerCase();
-                valB = b.creator.toLowerCase();
+                valA = a.nuResearchersStr ? a.nuResearchersStr.toLowerCase() : '';
+                valB = b.nuResearchersStr ? b.nuResearchersStr.toLowerCase() : '';
             } else if (sortField === 'journal') {
                 valA = a.journal.toLowerCase();
                 valB = b.journal.toLowerCase();
@@ -1086,21 +1144,22 @@ document.addEventListener('DOMContentLoaded', () => {
             if (pub.authorsRaw && pub.authorsRaw.length > 0) {
                 pub.authorsRaw.forEach((rawAuth, index) => {
                     if (typeof rawAuth !== 'object' || !rawAuth.name) return;
-                    const matchedRes = matchResearcher(rawAuth.name, activeResList);
+                    let matchedRes = null;
+                    if (rawAuth.userId) {
+                        matchedRes = activeResList.find(r => r.id === rawAuth.userId);
+                    }
+                    if (!matchedRes) {
+                        matchedRes = findResearcher(rawAuth.name, activeResList);
+                    }
                     if (matchedRes) {
                         const displayName = matchedRes.name;
                         const formattedDisplay = formatAuthorName(displayName);
-                        const isAff = (rawAuth.isNuAffiliated === 1 || rawAuth.isNuAffiliated === true);
-                        if (isAff) {
-                            nuResearchers.push(`<span class="researcher-tag-item" style="font-weight: 500; font-size: 0.85rem; color: var(--text-primary);">${formattedDisplay}<sup>${index + 1}</sup></span>`);
-                        } else {
-                            nuResearchers.push(`<span class="researcher-tag-item" title="Non-NU Affiliation for this paper" style="font-weight: 400; font-size: 0.85rem; color: var(--text-muted); opacity: 0.6;">${formattedDisplay}*<sup>${index + 1}</sup></span>`);
-                        }
+                        nuResearchers.push(`<span class="researcher-tag-item" style="font-weight: 500; font-size: 0.85rem; color: var(--text-primary);">${formattedDisplay}<sup>${index + 1}</sup></span>`);
                     }
                 });
             } else {
                 pub.authors.forEach((author, index) => {
-                    const matchedRes = matchResearcher(author, activeResList);
+                    const matchedRes = findResearcher(author, activeResList);
                     if (matchedRes) {
                         const displayName = matchedRes.name;
                         const formattedDisplay = formatAuthorName(displayName);

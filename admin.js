@@ -233,13 +233,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DATA FETCHING ---
     async function loadData() {
         try {
-            // Load researchers from researchers.json
+            // Fetch researchers from API
             const resResp = await fetch('https://iram-backend.tinnakornh.workers.dev/api/researchers');
             if (resResp.ok) {
-                researchers = await resResp.json();
+                const resData = await resResp.json();
+                originalResearchers = resData;
             }
 
-            // Load data.json for publications
+            // Fetch publications from API
             const dataResp = await fetch('https://iram-backend.tinnakornh.workers.dev/api/publications');
             if (dataResp.ok) {
                 const rawPubs = await dataResp.json() || [];
