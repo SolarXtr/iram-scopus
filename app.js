@@ -115,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnPrev = document.getElementById('btn-prev');
     const btnNext = document.getElementById('btn-next');
     const paginationInfo = document.getElementById('pagination-info');
+    const paginationInfoTop = document.getElementById('pagination-info-top');
     const pageSizeSelect = document.getElementById('page-size-select');
 
     const authorSearchInput = document.getElementById('author-search');
@@ -861,11 +862,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btnPrev.disabled = (currentPage === 1);
         btnNext.disabled = (currentPage === totalPages || totalItems === 0);
         
-        if (totalItems > 0) {
-            paginationInfo.textContent = `Showing ${startIndex + 1} to ${endIndex} of ${totalItems} entries`;
-        } else {
-            paginationInfo.textContent = `No matches found`;
-        }
+        const infoText = totalItems > 0 ? `Showing ${startIndex + 1} to ${endIndex} of ${totalItems} entries` : 'No matches found';
+        if (paginationInfo) paginationInfo.textContent = infoText;
+        if (paginationInfoTop) paginationInfoTop.textContent = infoText;
 
         // Render Table Body Rows
         publicationsTbody.innerHTML = '';
@@ -1067,19 +1066,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cleanDb = db.trim();
                 let icon = "fa-solid fa-graduation-cap";
                 let badgeClass = "db-badge-scopus";
+                let url = scopusUrl;
                 if (cleanDb.toLowerCase() === "pubmed") {
                     icon = "fa-solid fa-notes-medical";
                     badgeClass = "db-badge-pubmed";
+                    url = `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(pub.doi || pub.title)}`;
                 } else if (cleanDb.toLowerCase() === "wos" || cleanDb.toLowerCase() === "web of science") {
                     icon = "fa-solid fa-book";
                     badgeClass = "db-badge-wos";
+                    url = pub.doi ? `https://doi.org/${pub.doi}` : `https://google.com/search?q=${encodeURIComponent(pub.title + ' Web of Science')}`;
                 }
-                return `<span class="db-badge ${badgeClass}"><i class="${icon}" style="font-size: 0.65rem;"></i> ${cleanDb}</span>`;
+                return `<a href="${url}" target="_blank" class="db-badge ${badgeClass}" style="text-decoration: none;"><i class="${icon}" style="font-size: 0.65rem;"></i> ${cleanDb}</a>`;
             }).join('');
 
             // Compute Faculty of Medicine researchers with superscript numbers
             const nuResearchers = [];
-            const activeResList = database.researchers.filter(r => r.status === "Active" || !r.status);
+            const activeResList = database.researchers; // Include all researchers (Active + Resigned) to show them in MEDNU column
             
             if (pub.authorsRaw && pub.authorsRaw.length > 0) {
                 pub.authorsRaw.forEach((rawAuth, index) => {
@@ -1142,7 +1144,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             const qValDisplay = (!qVal || qVal === 'N/A' || qVal === 'Unknown') ? 'N/A' : qVal;
-            const qDisplay = !isNaN(evalYear) ? `${qValDisplay} (${evalYear})` : qValDisplay;
+            const qDisplay = (qValDisplay !== 'N/A' && !isNaN(evalYear)) ? `${qValDisplay} (${evalYear})` : qValDisplay;
             const tooltipText = `Scopus: ${qScopus} | SCImago: ${qScimago}`;
 
             const editButtonHtml = (currentUser && (currentUser.role === 'ADMIN' || (currentUser.role === 'MEMBER' && pub.authorsRaw && pub.authorsRaw.some(a => a.userId === currentUser.id)))) ? `
