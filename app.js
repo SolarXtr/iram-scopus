@@ -1215,12 +1215,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const qDisplay = (qValDisplay !== 'N/A' && !isNaN(evalYear)) ? `${qValDisplay} (${evalYear})` : qValDisplay;
             const tooltipText = `Scopus: ${qScopus} | SCImago: ${qScimago}`;
 
-            const editButtonHtml = (currentUser && (currentUser.role === 'ADMIN' || (currentUser.role === 'MEMBER' && pub.authorsRaw && pub.authorsRaw.some(a => a.userId === currentUser.id)))) ? `
-                <a href="#" class="btn-edit-pub" data-id="${pub.id}" style="margin-left: 0.8rem; font-size: 0.72rem; color: var(--accent-blue); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.2rem; cursor: pointer; background: var(--accent-blue-glow); padding: 0.15rem 0.4rem; border-radius: 4px; border: 1px solid rgba(37,99,235,0.15);">
-                    <i class="fa-solid fa-pen" style="font-size: 0.65rem;"></i> Edit
-                </a>
-            ` : '';
-
             tr.innerHTML = `
                 <td>
                     <div style="display: flex; flex-direction: column; gap: 0.4rem;">
@@ -1235,7 +1229,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="db-badges">
                                 ${dbBadgesHtml}
                             </div>
-                            ${editButtonHtml}
                         </div>
                     </div>
                 </td>
