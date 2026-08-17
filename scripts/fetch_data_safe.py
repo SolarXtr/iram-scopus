@@ -14,6 +14,105 @@ API_KEY = "68e2bfd85d173bb9c601817d969e11e5"
 REGISTRY_FILE = "researchers.json"
 
 BACKEND_URL = "https://iram-backend.tinnakornh.workers.dev"
+CACHE_FILE = "abstract_cache.json"
+try:
+    with open(CACHE_FILE, "r", encoding="utf-8") as f:
+        abstract_cache = json.load(f)
+except Exception:
+    abstract_cache = {}
+
+def save_cache():
+    try:
+        with open(CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(abstract_cache, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Error saving cache: {e}")
+
+def fetch_full_authors(doi, scopus_id=None):
+    """
+    Attempts to fetch the complete co-authors list for a publication.
+    1. Tries Scopus Abstract Retrieval API.
+    2. Fallback to PubMed (E-utilities) if Scopus Abstract fails.
+    """
+    # 1. Try Scopus Abstract Retrieval API
+    if doi or scopus_id:
+        url = f"https://api.elsevier.com/content/abstract/doi/{doi}" if doi else f"https://api.elsevier.com/content/abstract/scopus_id/{scopus_id}"
+        headers = {
+            "X-ELS-APIKey": API_KEY,
+            "Accept": "application/json"
+        }
+        try:
+            time.sleep(0.5)
+            r = safe_request(url, headers=headers, timeout=10)
+            if r and r.status_code == 200:
+                data = r.json()
+                resp = data.get("abstracts-retrieval-response", {})
+                item = resp.get("item", {})
+                bibrecord = item.get("bibrecord", {})
+                head = bibrecord.get("head", {})
+                author_groups = head.get("author-group", [])
+                
+                if author_groups:
+                    if not isinstance(author_groups, list):
+                        author_groups = [author_groups]
+                    
+                    authors_list = []
+                    for group in author_groups:
+                        auth_field = group.get("author", [])
+                        if not isinstance(auth_field, list):
+                            auth_field = [auth_field]
+                        for auth in auth_field:
+                            if not auth:
+                                continue
+                            pref = auth.get("preferred-name", {})
+                            surname = pref.get("ce:surname", "")
+                            initials = pref.get("ce:initials", "")
+                            if surname:
+                                initials_formatted = " ".join([i + "." for i in initials.replace(".", "").split()]) if initials else ""
+                                auth_name = f"{surname} {initials_formatted}".strip()
+                                authors_list.append(auth_name)
+                    if authors_list:
+                        return authors_list
+        except Exception as e:
+            print(f"  [Scopus Abstract Error] {e}")
+
+    # 2. Fallback: Try PubMed (E-utilities) via DOI
+    if doi:
+        pubmed_search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+        params = {
+            "db": "pubmed",
+            "term": doi,
+            "retmode": "json"
+        }
+        try:
+            time.sleep(0.5)
+            r = requests.get(pubmed_search_url, params=params, timeout=10)
+            if r.status_code == 200:
+                id_list = r.json().get("esearchresult", {}).get("idlist", [])
+                if id_list:
+                    pmid = id_list[0]
+                    summary_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+                    sr = requests.get(summary_url, params={"db": "pubmed", "id": pmid, "retmode": "json"}, timeout=10)
+                    if sr.status_code == 200:
+                        info = sr.json().get("result", {}).get(pmid, {})
+                        authors_info = info.get("authors", [])
+                        authors_list = []
+                        for auth in authors_info:
+                            name = auth.get("name", "")
+                            if name:
+                                tokens = name.split()
+                                if len(tokens) > 1:
+                                    surname = tokens[0]
+                                    inits = tokens[1]
+                                    inits_formatted = " ".join([i + "." for i in inits])
+                                    name = f"{surname} {inits_formatted}"
+                                authors_list.append(name)
+                        if authors_list:
+                            return authors_list
+        except Exception as e:
+            print(f"  [PubMed Fallback Error] {e}")
+
+    return None
 
 
 def safe_request(url, headers=None, params=None, timeout=15):
@@ -629,6 +728,30 @@ def main():
             # The primary "citations" field uses the Scopus citation count if available, fallback to PubMed
             existing["citations"] = scopus_cites if "Scopus" in existing["databases"] else pubmed_cites
             
+    # 3.5 Enhance co-author lists for unique publications
+    print(f"Enhancing co-author lists using Abstract Retrieval & PubMed APIs...")
+    for key, doc in unique_docs.items():
+        doi = doc.get("doi")
+        if not doi:
+            continue
+        
+        current_authors = doc.get("authors", [])
+        if len(current_authors) <= 1:
+            if doi in abstract_cache:
+                enhanced = abstract_cache[doi]
+                print(f"  [Cache Hit] Using cached authors for: {doc['title'][:50]}...")
+            else:
+                enhanced = fetch_full_authors(doi)
+                if enhanced:
+                    abstract_cache[doi] = enhanced
+                    save_cache()
+                    print(f"  [Enhanced] Fetched full authors list ({len(enhanced)}) for: {doc['title'][:50]}...")
+                else:
+                    enhanced = None
+            
+            if enhanced:
+                doc["authors"] = enhanced
+                
     final_results = list(unique_docs.values())
     
     # 4. Push results to API in batches
