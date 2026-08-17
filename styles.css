@@ -1048,3 +1048,50 @@ body {
     font-size: 0.75rem;
     color: var(--text-muted);
 }
+
+/* Author Mapping Rows in Modal */
+.author-mapping-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.85rem;
+}
+.author-mapping-name {
+    flex: 1.5;
+    font-weight: 500;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.author-mapping-affiliation {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+.author-mapping-affiliation input {
+    cursor: pointer;
+}
+.author-mapping-select {
+    flex: 2;
+    padding: 0.35rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    font-size: 0.8rem;
+    outline: none;
+    background: #ffffff;
+    color: var(--text-primary);
+}
+.author-mapping-select:disabled {
+    background: #e2e8f0;
+    color: var(--text-muted);
+    cursor: not-allowed;
+}

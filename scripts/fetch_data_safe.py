@@ -797,7 +797,7 @@ def main():
             "citations": doc.get("citations", 0)
         })
 
-    batch_size = 50
+    batch_size = 20
     print(f"Pushing {len(payloads)} publications in batches of {batch_size} to {api_url}...")
     headers = {"Content-Type": "application/json", "X-User-Role": "ADMIN"}
     
@@ -819,4 +819,8 @@ def main():
         time.sleep(1)
 
     print(f"API Push complete. Success: {success_count}, Errors: {error_count}")
+
+
+if __name__ == "__main__":
+    main()
 

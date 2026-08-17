@@ -247,10 +247,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 publications = rawPubs.map(pub => {
                     let parsedAuthors = [];
                     let corrAuthorStr = null;
+                    let authorsRawList = [];
                     if (pub.authors) {
                         try {
                             const authorsObjArray = typeof pub.authors === 'string' ? JSON.parse(pub.authors) : pub.authors;
                             if (Array.isArray(authorsObjArray)) {
+                                authorsRawList = authorsObjArray;
                                 parsedAuthors = authorsObjArray.map(a => typeof a === 'string' ? a : (a.name || ''));
                                 const corr = authorsObjArray.find(a => typeof a === 'object' && (a.isCorresponding === 1 || a.isCorresponding === true));
                                 if (corr) corrAuthorStr = corr.name;
@@ -272,6 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         quartile_scopus: pub.quartile || '',
                         quartile_scimago: pub.quartile_scimago || '',
                         authors: parsedAuthors,
+                        authorsRaw: authorsRawList,
                         corresponding_author: corrAuthorStr || pub.corresponding_author || null,
                         databases: parsedDbs
                     };
@@ -862,6 +865,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Publication Modal Helpers
     function openPublicationModal(idx = null) {
+        const mappingGroup = document.getElementById('pub-authors-mapping-group');
+        const listContainer = document.getElementById('pub-authors-list-container');
+        
         if (idx !== null) {
             publicationModalTitle.textContent = "Edit Article Details";
             const pub = publications[idx];
@@ -885,6 +891,66 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('db-scopus').checked = dbList.includes("Scopus");
             document.getElementById('db-pubmed').checked = dbList.includes("PubMed");
             document.getElementById('db-wos').checked = dbList.includes("WoS") || dbList.includes("Web of Science");
+
+            // Render author mappings
+            listContainer.innerHTML = '';
+            mappingGroup.style.display = 'block';
+
+            const sortedResearchers = [...originalResearchers].sort((a, b) => a.name.localeCompare(b.name));
+            const authorsData = pub.authorsRaw || [];
+
+            authorsData.forEach((auth, i) => {
+                const authorRow = document.createElement('div');
+                authorRow.className = 'author-mapping-row';
+                authorRow.dataset.index = i;
+                authorRow.dataset.name = typeof auth === 'string' ? auth : (auth.name || '');
+
+                const nameLabel = document.createElement('div');
+                nameLabel.className = 'author-mapping-name';
+                nameLabel.textContent = `${i + 1}. ${typeof auth === 'string' ? auth : (auth.name || '')}`;
+                authorRow.appendChild(nameLabel);
+
+                const isAff = typeof auth === 'object' && (auth.isNuAffiliated === 1 || auth.isNuAffiliated === true);
+                const affLabel = document.createElement('label');
+                affLabel.className = 'author-mapping-affiliation';
+                
+                const affCheckbox = document.createElement('input');
+                affCheckbox.type = 'checkbox';
+                affCheckbox.checked = isAff;
+                affCheckbox.className = 'author-aff-cb';
+                affLabel.appendChild(affCheckbox);
+                affLabel.appendChild(document.createTextNode(' MEDNU'));
+                authorRow.appendChild(affLabel);
+
+                const select = document.createElement('select');
+                select.className = 'author-mapping-select';
+                select.disabled = !isAff;
+
+                const defaultOpt = document.createElement('option');
+                defaultOpt.value = '';
+                defaultOpt.textContent = '- Select Researcher -';
+                select.appendChild(defaultOpt);
+
+                sortedResearchers.forEach(res => {
+                    const opt = document.createElement('option');
+                    opt.value = res.id;
+                    opt.textContent = res.name;
+                    if (typeof auth === 'object' && auth.userId === res.id) {
+                        opt.selected = true;
+                    }
+                    select.appendChild(opt);
+                });
+                authorRow.appendChild(select);
+
+                affCheckbox.addEventListener('change', () => {
+                    select.disabled = !affCheckbox.checked;
+                    if (!affCheckbox.checked) {
+                        select.value = '';
+                    }
+                });
+
+                listContainer.appendChild(authorRow);
+            });
         } else {
             publicationModalTitle.textContent = "Add New Article";
             publicationForm.reset();
@@ -899,6 +965,9 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('db-scopus').checked = true;
             document.getElementById('db-pubmed').checked = false;
             document.getElementById('db-wos').checked = false;
+            
+            listContainer.innerHTML = '';
+            mappingGroup.style.display = 'none';
         }
         publicationModal.classList.add('active');
     }
@@ -959,6 +1028,23 @@ document.addEventListener('DOMContentLoaded', () => {
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving...';
 
+            const authorsPayload = [];
+            const rows = document.querySelectorAll('.author-mapping-row');
+            rows.forEach((row, i) => {
+                const name = row.dataset.name;
+                const isNuAffiliated = row.querySelector('.author-aff-cb').checked ? 1 : 0;
+                const userId = row.querySelector('.author-mapping-select').value || null;
+                const isCorresponding = record.corresponding_author ? record.corresponding_author.toLowerCase() === name.toLowerCase() : false;
+                
+                authorsPayload.push({
+                    name: name,
+                    order: i + 1,
+                    isCorresponding: isCorresponding,
+                    isNuAffiliated: isNuAffiliated,
+                    userId: userId
+                });
+            });
+
             fetch(`https://iram-backend.tinnakornh.workers.dev/api/publications/${originalPub.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -969,13 +1055,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     citations: record.citations,
                     doi: record.doi,
                     quartile: record.quartile_scopus,
-                    quartile_scimago: record.quartile_scimago
+                    quartile_scimago: record.quartile_scimago,
+                    authors: authorsPayload
                 })
             }).then(res => {
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'Save Details';
                 if (res.ok) {
-                    publications[parseInt(idx)] = { ...originalPub, ...record };
+                    publications[parseInt(idx)] = { ...originalPub, ...record, authorsRaw: authorsPayload };
                     renderPublications();
                     showToast("Article updated successfully in DB");
                 } else {
@@ -1025,7 +1112,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveBtn.textContent = 'Save Details';
                 if (resData.id) {
                     record.id = resData.id;
-                    publications.push(record);
+                    publications.push({ ...record, authorsRaw: authorsPayload });
                     renderPublications();
                     showToast("Article added successfully in DB");
                 } else {
