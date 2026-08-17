@@ -1519,10 +1519,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isAdmin || isSelf) {
                 if (editBtnContainer) editBtnContainer.style.display = 'block';
                 
-                document.getElementById('edit-res-orcid').value = matchedRes.orcid || '';
-                document.getElementById('edit-res-scopus').value = matchedRes.author_id || '';
-                document.getElementById('edit-res-join-date').value = matchedRes.joinDate || '';
-                document.getElementById('edit-res-resign-date').value = matchedRes.resignDate || '';
+                const editOrcidEl = document.getElementById('edit-res-orcid');
+                const editScopusEl = document.getElementById('edit-res-scopus');
+                const editJoinEl = document.getElementById('edit-res-join-date');
+                const editResignEl = document.getElementById('edit-res-resign-date');
+
+                if (editOrcidEl) editOrcidEl.value = matchedRes.orcid || '';
+                if (editScopusEl) editScopusEl.value = matchedRes.author_id || '';
+                if (editJoinEl) editJoinEl.value = matchedRes.joinDate || '';
+                if (editResignEl) editResignEl.value = matchedRes.resignDate || '';
 
                 const btnEditProfile = document.getElementById('btn-modal-edit-profile');
                 if (btnEditProfile) {
