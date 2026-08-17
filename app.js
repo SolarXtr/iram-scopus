@@ -1297,8 +1297,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderAuthorsList() {
         const searchText = authorSearchInput.value.toLowerCase();
         
-        // Compile author stats (Registered only)
-        const activeResearchers = database.researchers.filter(r => r.status === "Active" || !r.status);
+        // Compile author stats (All registered researchers - Active and Resigned)
+        const activeResearchers = database.researchers;
         const registeredNames = new Set(activeResearchers.map(r => r.name.trim().toLowerCase()));
         const authorStats = {};
         
