@@ -550,12 +550,28 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         researcherTbody.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', async (e) => {
                 const idx = parseInt(btn.getAttribute('data-idx'));
-                if (confirm(`Are you sure you want to delete ${researchers[idx].name}?`)) {
-                    researchers.splice(idx, 1);
-                    renderResearchers();
-                    showToast("Researcher removed locally (Remember to Save)");
+                const researcher = researchers[idx];
+                if (confirm(`Are you sure you want to delete ${researcher.name}?`)) {
+                    if (researcher.id) {
+                        try {
+                            const res = await fetch(`https://iram-backend.tinnakornh.workers.dev/api/researchers/${researcher.id}`, {
+                                method: 'DELETE',
+                                headers: { 'X-User-Role': 'ADMIN' }
+                            });
+                            if (!res.ok) throw new Error('API Error');
+                            researchers.splice(idx, 1);
+                            renderResearchers();
+                            showToast("Researcher deleted successfully");
+                        } catch(e) {
+                            showToast("Failed to delete researcher from DB", "error");
+                        }
+                    } else {
+                        researchers.splice(idx, 1);
+                        renderResearchers();
+                        showToast("Researcher removed locally");
+                    }
                 }
             });
         });
@@ -753,15 +769,32 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         publicationTbody.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
                 const idx = parseInt(btn.getAttribute('data-idx'));
-                if (confirm(`Are you sure you want to delete this publication: "${publications[idx].title.substring(0, 50)}..."?`)) {
-                    publications.splice(idx, 1);
-                    renderPublications();
-                    showToast("Article removed locally (Remember to Save)");
+                const pub = publications[idx];
+                if (confirm(`Are you sure you want to delete this publication: "${pub.title.substring(0, 50)}..."?`)) {
+                    if (pub.id) {
+                        try {
+                            const res = await fetch(`https://iram-backend.tinnakornh.workers.dev/api/publications/${pub.id}`, {
+                                method: 'DELETE',
+                                headers: { 'X-User-Role': 'ADMIN' }
+                            });
+                            if (!res.ok) throw new Error('API Error');
+                            publications.splice(idx, 1);
+                            renderPublications();
+                            showToast("Publication deleted successfully");
+                        } catch(e) {
+                            showToast("Failed to delete publication from DB", "error");
+                        }
+                    } else {
+                        publications.splice(idx, 1);
+                        renderPublications();
+                        showToast("Publication removed locally");
+                    }
                 }
             });
         });
+
     }
 
     // --- FORM MODAL ACTIONS ---
